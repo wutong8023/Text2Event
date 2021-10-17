@@ -46,6 +46,8 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from extraction.event_schema import EventSchema
 from extraction.extraction_metrics import decoding_format_dict, get_extract_metrics
 from seq2seq.constrained_seq2seq import ConstraintSeq2SeqTrainingArguments, ConstraintSeq2SeqTrainer
+from prefix.prefix_model import PrefixEncoderDecoder
+from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
 
 # if not os.path.exists("~/nltk_data/tokenizers/punkt"):
 #     print('Start download punk')
@@ -60,7 +62,7 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    
     model_name_or_path: str = field(
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"}
@@ -103,7 +105,7 @@ class DataTrainingArguments:
     """
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
-
+    
     task: str = field(
         default="summarization",
         metadata={
@@ -223,7 +225,7 @@ class DataTrainingArguments:
     source_prefix: Optional[str] = field(
         default=None, metadata={"help": "A prefix to add before every source text (useful for T5 models)."}
     )
-
+    
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None and self.validation_file is None:
             raise ValueError(
@@ -244,12 +246,12 @@ class DataTrainingArguments:
             )
         if self.val_max_target_length is None:
             self.val_max_target_length = self.max_target_length
-
+    
     # Start Code for Event Extraction
     decoding_format: str = field(
         default='tree',
         metadata={"help": "Decoding Format, valid in %s" %
-                  decoding_format_dict.keys()}
+                          decoding_format_dict.keys()}
     )
     event_schema: str = field(
         default=None, metadata={"help": "The input event schema file."}
@@ -280,7 +282,7 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-
+    
     parser = HfArgumentParser(
         (ModelArguments, DataTrainingArguments, ConstraintSeq2SeqTrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -290,11 +292,11 @@ def main():
             json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
+    
     print(model_args)
     print(data_args)
     print(training_args)
-
+    
     # Detecting last checkpoint.
     last_checkpoint = None
     if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
@@ -309,7 +311,7 @@ def main():
                 f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
                 "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
             )
-
+    
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -318,7 +320,7 @@ def main():
     )
     logger.setLevel(logging.INFO if is_main_process(
         training_args.local_rank) else logging.WARN)
-
+    
     # Log on each process the small summary:
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
@@ -328,10 +330,10 @@ def main():
     if is_main_process(training_args.local_rank):
         transformers.utils.logging.set_verbosity_info()
     logger.info("Training/evaluation parameters %s", training_args)
-
+    
     # Set seed before initializing model.
     set_seed(training_args.seed)
-
+    
     # Get the datasets: you can either provide your own CSV/JSON training and evaluation files (see below)
     # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
     # (the dataset will be downloaded automatically from the datasets Hub).
@@ -362,7 +364,7 @@ def main():
         datasets = load_dataset(extension, data_files=data_files)
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
-
+    
     # Load pretrained model and tokenizer
     #
     # Distributed training:
@@ -374,10 +376,10 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-
+    
     # !!! Sometimes default max_length is setting to 20.
     config.max_length = data_args.max_target_length
-
+    
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -385,7 +387,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-
+    
     to_remove_token_list = list()
     if tokenizer.bos_token:
         to_remove_token_list += [tokenizer.bos_token]
@@ -393,31 +395,55 @@ def main():
         to_remove_token_list += [tokenizer.eos_token]
     if tokenizer.pad_token:
         to_remove_token_list += [tokenizer.pad_token]
-
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-
+    
+    if training_args.tuning_type == "fine":
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    else:
+        if model_args.model_name_or_path == "t5-base":
+            model = T5ForPrefixGeneration.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+            model = PrefixEncoderDecoder(model=model, training_args=training_args)
+        else:
+            # load the wrapped pretrained language model
+            model = T5ForPrefixGeneration.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+    
+    
+    
     if tokenizer.encode("<extra_id_0> <extra_id_1>") != [32099, 32098, 1]:
         # For non-t5 tokenizer
         tokenizer.add_special_tokens(
             {"additional_special_tokens": ["<extra_id_0>", "<extra_id_1>"]})
         model.resize_token_embeddings(len(tokenizer))
-
+    
     # Set decoder_start_token_id
     if model.config.decoder_start_token_id is None and isinstance(tokenizer, MBartTokenizer):
         model.config.decoder_start_token_id = tokenizer.lang_code_to_id[data_args.target_lang]
     if model.config.decoder_start_token_id is None:
         raise ValueError(
             "Make sure that `config.decoder_start_token_id` is correctly defined")
-
+    
     prefix = data_args.source_prefix if data_args.source_prefix is not None else ""
-
+    
     # Preprocessing the datasets.
     # We need to tokenize inputs and targets.
     if training_args.do_train:
@@ -430,7 +456,7 @@ def main():
         logger.info(
             "There is nothing to do. Please pass `do_train`, `do_eval` and/or `do_predict`.")
         return
-
+    
     # For translation we set the codes of our source and target languages (only useful for mBART, the others will
     # ignore those attributes).
     if data_args.task.startswith("translation"):
@@ -438,7 +464,7 @@ def main():
             tokenizer.src_lang = data_args.source_lang
         if data_args.target_lang is not None:
             tokenizer.tgt_lang = data_args.target_lang
-
+    
     # Start Code for Event Extraction
     if data_args.task.startswith("event"):
         decoding_type_schema = EventSchema.read_from_file(
@@ -446,11 +472,11 @@ def main():
     else:
         decoding_type_schema = None
     # End Code for Event Extraction
-
+    
     # To serialize preprocess_function below, each of those four variables needs to be defined (even if we won't use
     # them all).
     source_lang, target_lang, text_column, summary_column = None, None, None, None
-
+    
     if data_args.task.startswith("summarization"):
         # Get the column names for input/target.
         dataset_columns = summarization_name_mapping.get(
@@ -484,28 +510,28 @@ def main():
             source_lang = data_args.source_lang.split("_")[0]
         else:
             assert (
-                lang_search is not None
+                    lang_search is not None
             ), "Provide a source language via --source_lang or rename your task 'translation_xx_to_yy'."
             source_lang = lang_search.groups()[0]
-
+        
         if data_args.target_lang is not None:
             target_lang = data_args.target_lang.split("_")[0]
         else:
             assert (
-                lang_search is not None
+                    lang_search is not None
             ), "Provide a target language via --target_lang or rename your task 'translation_xx_to_yy'."
             target_lang = lang_search.groups()[1]
-
+    
     # Temporarily set max_target_length for training.
     max_target_length = data_args.max_target_length
     padding = "max_length" if data_args.pad_to_max_length else False
-
+    
     if training_args.label_smoothing_factor > 0 and not hasattr(model, "prepare_decoder_input_ids_from_labels"):
         logger.error(
             "label_smoothing is enabled but the `prepare_decoder_input_ids_from_labels` method is not defined for"
             f"`{model.__class__.__name__}`. This will lead to loss being calculated twice and will take up more memory"
         )
-
+    
     def preprocess_function(examples):
         if data_args.task.startswith("translation"):
             inputs = [ex[source_lang] for ex in examples["translation"]]
@@ -516,22 +542,22 @@ def main():
         inputs = [prefix + inp for inp in inputs]
         model_inputs = tokenizer(
             inputs, max_length=data_args.max_source_length, padding=padding, truncation=True)
-
+        
         # Setup the tokenizer for targets
         with tokenizer.as_target_tokenizer():
             labels = tokenizer(
                 targets, max_length=max_target_length, padding=padding, truncation=True)
-
+        
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
         if padding == "max_length" and data_args.ignore_pad_token_for_loss:
             labels["input_ids"] = [
                 [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
             ]
-
+        
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
-
+    
     if training_args.do_train:
         train_dataset = datasets["train"]
         if data_args.max_train_samples is not None:
@@ -544,7 +570,7 @@ def main():
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-
+    
     if training_args.do_eval:
         max_target_length = data_args.val_max_target_length
         eval_dataset = datasets["validation"]
@@ -558,7 +584,7 @@ def main():
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-
+    
     if training_args.do_predict:
         max_target_length = data_args.val_max_target_length
         test_dataset = datasets["test"]
@@ -572,7 +598,7 @@ def main():
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-
+    
     # Data collator
     label_pad_token_id = - \
         100 if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id
@@ -585,7 +611,7 @@ def main():
             label_pad_token_id=label_pad_token_id,
             pad_to_multiple_of=8 if training_args.fp16 else None,
         )
-
+    
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
         if isinstance(preds, tuple):
@@ -597,28 +623,28 @@ def main():
             labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(
             labels, skip_special_tokens=False)
-
+        
         def clean_str(x_str):
             for to_remove_token in to_remove_token_list:
                 x_str = x_str.replace(to_remove_token, '')
             return x_str.strip()
-
+        
         decoded_preds = [clean_str(x) for x in decoded_preds]
         decoded_labels = [clean_str(x) for x in decoded_labels]
-
+        
         result = get_extract_metrics(
             pred_lns=decoded_preds,
             tgt_lns=decoded_labels,
             label_constraint=decoding_type_schema,
             decoding_format=data_args.decoding_format,
         )
-
+        
         prediction_lens = [np.count_nonzero(
             pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
         return result
-
+    
     # Initialize our Trainer
     trainer = ConstraintSeq2SeqTrainer(
         model=model,
@@ -632,7 +658,7 @@ def main():
         decoding_format=data_args.decoding_format,
         source_prefix=prefix,
     )
-
+    
     # Training
     if training_args.do_train:
         # if last_checkpoint is not None:
@@ -643,7 +669,7 @@ def main():
         #     checkpoint = None
         # TODO fix better about max_length
         checkpoint = None
-
+        
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
         decoding_type_schema.write_to_file(
@@ -652,7 +678,7 @@ def main():
                 "event.schema",
             )
         )
-
+        
         output_train_file = os.path.join(
             training_args.output_dir, "train_results.txt")
         if trainer.is_world_process_zero():
@@ -661,28 +687,27 @@ def main():
                 for key, value in sorted(train_result.metrics.items()):
                     logger.info(f"  {key} = {value}")
                     writer.write(f"{key} = {value}\n")
-
+            
             # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
             trainer.state.save_to_json(os.path.join(
                 training_args.output_dir, "trainer_state.json"))
-
-
+    
     # Evaluation
     results = {}
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
-
+        
         results = trainer.evaluate(
             max_length=data_args.val_max_target_length, num_beams=data_args.num_beams)
         results = {k: round(v, 4) for k, v in results.items()}
-
+        
         eval_results = trainer.predict(
             eval_dataset,
             metric_key_prefix="eval",
             max_length=data_args.val_max_target_length,
             num_beams=data_args.num_beams,
         )
-
+        
         output_eval_file = os.path.join(
             training_args.output_dir, "eval_results_seq2seq.txt")
         if trainer.is_world_process_zero():
@@ -691,7 +716,7 @@ def main():
                 for key, value in sorted(results.items()):
                     logger.info(f"  {key} = {value}")
                     writer.write(f"{key} = {value}\n")
-
+            
             if training_args.predict_with_generate:
                 eval_preds = tokenizer.batch_decode(
                     eval_results.predictions, skip_special_tokens=False, clean_up_tokenization_spaces=True
@@ -702,10 +727,10 @@ def main():
                     training_args.output_dir, "eval_preds_seq2seq.txt")
                 with open(output_test_preds_file, "w") as writer:
                     writer.write("\n".join(eval_preds))
-
+    
     if training_args.do_predict:
         logger.info("*** Test ***")
-
+        
         test_results = trainer.predict(
             test_dataset,
             metric_key_prefix="test",
@@ -714,7 +739,7 @@ def main():
         )
         test_metrics = test_results.metrics
         test_metrics["test_loss"] = round(test_metrics["test_loss"], 4)
-
+        
         output_test_result_file = os.path.join(
             training_args.output_dir, "test_results_seq2seq.txt")
         if trainer.is_world_process_zero():
@@ -723,7 +748,7 @@ def main():
                 for key, value in sorted(test_metrics.items()):
                     logger.info(f"  {key} = {value}")
                     writer.write(f"{key} = {value}\n")
-
+            
             if training_args.predict_with_generate:
                 test_preds = tokenizer.batch_decode(
                     test_results.predictions, skip_special_tokens=False, clean_up_tokenization_spaces=True
@@ -734,7 +759,7 @@ def main():
                     training_args.output_dir, "test_preds_seq2seq.txt")
                 with open(output_test_preds_file, "w") as writer:
                     writer.write("\n".join(test_preds))
-
+    
     return results
 
 
