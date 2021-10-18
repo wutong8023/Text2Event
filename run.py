@@ -146,7 +146,7 @@ if __name__ == '__main__':
     
     # cmd: submit batch jobs for multi jobs
     # optional partition for m3: dgx , m3g, m3h, m3e
-    batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g")
+    # batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g")
 
     # cmd: cancel jobs
-    # batch_cancel(10977, 200, platform=args.pltf)
+    batch_cancel(10977, 200, platform=args.pltf)
