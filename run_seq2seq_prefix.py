@@ -672,6 +672,9 @@ def main():
         
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
+        if isinstance(model, PrefixEncoderDecoder):
+            model.model.config.to_json_file(os.path.join(training_args.output_dir, "config.json"))
+        
         decoding_type_schema.write_to_file(
             os.path.join(
                 training_args.output_dir,

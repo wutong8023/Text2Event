@@ -26,6 +26,7 @@ from datetime import datetime
 def get_cmd():
     cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
+    info_list = []
     source_data = "oneie/oneie_23_training"
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
@@ -47,6 +48,7 @@ def get_cmd():
                       f"--data {source_data} " \
                       f"--output_dir {source_output_dir} " \
                       f"--tuning_type {tuning_type} "
+                info_list.append(f"src_{tuning_type}")
                 cmd_list.append(cmd)
         # transfer learning
         """
@@ -54,7 +56,7 @@ def get_cmd():
         """
         # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
 
-        for epoch in [1]:
+        for epoch in [30]:
             for shot in [1, 2, 5, 10, 15]:
                 for data in [f"oneie/oneie_{str(shot)}_ft"]:
                     target_output_dir = f"models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
@@ -72,6 +74,6 @@ def get_cmd():
                           f"--data {data} " \
                           f"--output_dir {target_output_dir} " \
                           f"--tuning_type {tuning_type} "
+                    info_list.append(f"trg_{tuning_type}_shot-{shot}")
                     cmd_list.append(cmd)
-
-    return cmd_list
+    return cmd_list, info_list

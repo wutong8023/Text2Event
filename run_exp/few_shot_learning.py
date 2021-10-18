@@ -25,16 +25,15 @@ from datetime import datetime
 
 
 def get_cmd():
-    cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
+    info_list = []
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [60]:
             for model in ["t5-base"]:
-                for shot in [1,2, 5, 10, 15]:
+                for shot in [1, 2, 5, 10, 15]:
                     for data in [f"oneie/few_shot_{str(shot)}"]:
                         target_output_dir = f"models/fsl_{tuning_type}_shot-{shot}_{data.split('/')[1]}_{current_time}"
-                        print(target_output_dir)
                         cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                               f"-d 0 " \
                               f"-f tree " \
@@ -48,6 +47,6 @@ def get_cmd():
                               f"--data {data} " \
                               f"--output_dir {target_output_dir} " \
                               f"--tuning_type {tuning_type} "
+                        info_list.append(f"fsl_{tuning_type}_{str(shot)}")
                         cmd_list.append(cmd)
-
-    return cmd_list
+    return cmd_list, info_list
