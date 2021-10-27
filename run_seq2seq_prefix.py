@@ -46,7 +46,7 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from extraction.event_schema import EventSchema
 from extraction.extraction_metrics import decoding_format_dict, get_extract_metrics
 from seq2seq.constrained_seq2seq import ConstraintSeq2SeqTrainingArguments, ConstraintSeq2SeqTrainer
-from prefix.prefix_model import PrefixEncoderDecoder
+from prefix.prefix_model import PrefixEncoderDecoder, PromptGenerater
 from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
 
 # if not os.path.exists("~/nltk_data/tokenizers/punkt"):
@@ -407,7 +407,7 @@ def main():
         )
     else:
         if model_args.model_name_or_path == "t5-base":
-            model = T5ForPrefixGeneration.from_pretrained(
+            plm_model = T5ForPrefixGeneration.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
@@ -415,7 +415,10 @@ def main():
                 revision=model_args.model_revision,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
-            model = PrefixEncoderDecoder(model=model, training_args=training_args)
+            prompt_generater = PromptGenerater(config=config, device=training_args.device,
+                                               num_token=training_args.prefix_len)
+            model = PrefixEncoderDecoder(model=plm_model, prompt_generater=prompt_generater,
+                                         training_args=training_args)
         else:
             # load the wrapped pretrained language model
             model = T5ForPrefixGeneration.from_pretrained(
@@ -426,8 +429,9 @@ def main():
                 revision=model_args.model_revision,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
-    
-    
+            # prompt_generater = PromptGenerater(config=config, device=training_args.device,
+            #                                    num_token=training_args.prefix_len)
+            # prompt_generater.load_model(path=model_args.model_name_or_path)
     
     if tokenizer.encode("<extra_id_0> <extra_id_1>") != [32099, 32098, 1]:
         # For non-t5 tokenizer

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 """
-# Intro: 
+# Intro:
 # Author: Tongtong Wu
 # Time: Oct 14, 2021
 """
@@ -105,7 +105,6 @@ def batch_run_interactive(cmd_list: [str], order=1):
         print(i)
     for i in cmd_list[::order]:
         try:
-            i = i + "  --pltf m"
             os.system(i)
             time.sleep(10)
             print(i)
@@ -130,6 +129,9 @@ if __name__ == '__main__':
     parser.add_argument("--split", default=3, type=int, help="experiment id")
     parser.add_argument("--pltf", default="group", type=str, help="cluster: m3, group",
                         choices=["m3", "group"])
+    parser.add_argument("--sbatch", action="store_true")
+    parser.add_argument("--cancel", type=int)
+    parser.add_argument("--range", type=int)
     args = parser.parse_args()
     
     exps = {
@@ -141,12 +143,12 @@ if __name__ == '__main__':
     
     cmd_list, info_list = exps[args.exp].get_cmd()
     
-    # cmd: running in an interactive session
-    # batch_run_interactive(cmd_list, order=1)
+    if args.sbatch:
+        batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g")
+    else:
+        # cmd: submit batch jobs for multi jobs
+        # optional partition for m3: dgx , m3g, m3h, m3e
+        batch_run_interactive(cmd_list, order=1)
     
-    # cmd: submit batch jobs for multi jobs
-    # optional partition for m3: dgx , m3g, m3h, m3e
-    # batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g")
-
-    # cmd: cancel jobs
-    batch_cancel(10977, 200, platform=args.pltf)
+    if args.cancel:
+        batch_cancel(args.cancel, args.range, platform=args.pltf)

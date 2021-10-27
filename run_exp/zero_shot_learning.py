@@ -37,7 +37,7 @@ def get_cmd():
             print(source_output_dir)
             # training on source domain
             for model_name in ["t5-base"]:
-                for epoch in [30]:
+                for epoch in [60]:
                     cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                           f"-d 0 " \
                           f"-f tree " \

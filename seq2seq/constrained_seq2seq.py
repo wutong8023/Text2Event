@@ -12,11 +12,17 @@ from torch.cuda.amp import autocast
 
 from transformers import (
     PreTrainedTokenizer,
+    PreTrainedModel,
     EvalPrediction,
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
 )
+from transformers.modeling_utils import unwrap_model
+from transformers.file_utils import WEIGHTS_NAME
+from transformers.trainer_pt_utils import IterableDatasetShard
+
 from torch.utils.data import DataLoader, Dataset
+from transformers.trainer import Trainer
 
 from extraction.event_schema import EventSchema
 from extraction.extract_constraint import get_constraint_decoder
@@ -24,7 +30,7 @@ from extraction.extraction_metrics import get_extract_metrics
 from seq2seq.label_smoother_sum import SumLabelSmoother
 from seq2seq.utils import lmap
 
-
+from prefix.prefix_model import PrefixEncoderDecoder
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +45,9 @@ def decode_tree_str(sequences: Union[List[int], List[List[int]], "np.ndarray", "
                     tokenizer: PreTrainedTokenizer) -> List[str]:
     def clean_tree_text(x):
         return x.replace('<pad>', '').replace('<s>', '').replace('</s>', '').strip()
-
+    
     sequences = np.where(sequences != -100, sequences, tokenizer.pad_token_id)
-
+    
     str_list = tokenizer.batch_decode(sequences, skip_special_tokens=False)
     return lmap(clean_tree_text, str_list)
 
@@ -51,10 +57,10 @@ def build_compute_extract_metrics_event_fn(decoding_type_schema: EventSchema,
                                            tokenizer: PreTrainedTokenizer) -> Callable[[EvalPrediction], Dict]:
     def non_pad_len(tokens: np.ndarray) -> int:
         return np.count_nonzero(tokens != tokenizer.pad_token_id)
-
+    
     def decode_pred(pred: EvalPrediction) -> Tuple[List[str], List[str]]:
         return decode_tree_str(pred.predictions, tokenizer), decode_tree_str(pred.label_ids, tokenizer)
-
+    
     def extraction_metrics(pred: EvalPrediction) -> Dict:
         pred_str, label_str = decode_pred(pred)
         extraction = get_extract_metrics(pred_lns=pred_str, tgt_lns=label_str, label_constraint=decoding_type_schema,
@@ -64,7 +70,7 @@ def build_compute_extract_metrics_event_fn(decoding_type_schema: EventSchema,
         extraction.update({"gen_len": summ_len})
         # extraction.update( )
         return extraction
-
+    
     compute_metrics_fn = extraction_metrics
     return compute_metrics_fn
 
@@ -81,16 +87,16 @@ class ConstraintSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     label_smoothing_sum: bool = field(default=False,
                                       metadata={"help": "Whether to use sum token loss for label smoothing"})
     tuning_type: str = field(default="both", metadata={"help": "tuning type in both, prefix or fine-tuning"})
-    
+    prefix_len: int = field(default=5, metadata={"help": "length of prefix tokens"})
 
 
 class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
     def __init__(self, decoding_type_schema=None, decoding_format='tree', source_prefix=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        
         self.decoding_format = decoding_format
         self.decoding_type_schema = decoding_type_schema
-
+        
         # Label smoothing by sum token loss, different from different Label smootheing
         if self.args.label_smoothing_sum and self.args.label_smoothing_factor != 0:
             self.label_smoother = SumLabelSmoother(epsilon=self.args.label_smoothing_factor)
@@ -99,7 +105,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             print('Using %s' % self.label_smoother)
         else:
             self.label_smoother = None
-
+        
         if self.args.constraint_decoding:
             self.constraint_decoder = get_constraint_decoder(tokenizer=self.tokenizer,
                                                              type_schema=self.decoding_type_schema,
@@ -107,7 +113,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                                                              source_prefix=source_prefix)
         else:
             self.constraint_decoder = None
-
+    
     def prediction_step(
             self,
             model: nn.Module,
@@ -135,13 +141,13 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]: A tuple with the loss, logits and
             labels (each being optional).
         """
-
+        
         def prefix_allowed_tokens_fn(batch_id, sent):
             # print(self.tokenizer.convert_ids_to_tokens(inputs['labels'][batch_id]))
             src_sentence = inputs['input_ids'][batch_id]
             return self.constraint_decoder.constraint_decoding(src_sentence=src_sentence,
                                                                tgt_generated=sent)
-
+        
         if not self.args.predict_with_generate or prediction_loss_only:
             return super().prediction_step(
                 model=model,
@@ -150,26 +156,26 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                 ignore_keys=ignore_keys,
                 prefix_allowed_tokens_fn=prefix_allowed_tokens_fn if self.constraint_decoder else None,
             )
-
+        
         has_labels = "labels" in inputs
         inputs = self._prepare_inputs(inputs)
-
+        
         gen_kwargs = {
             "max_length": self._max_length if self._max_length is not None else self.model.config.max_length,
             "num_beams": self._num_beams if self._num_beams is not None else self.model.config.num_beams,
             "prefix_allowed_tokens_fn": prefix_allowed_tokens_fn if self.constraint_decoder else None,
         }
-
+        
         generated_tokens = self.model.generate(
             input_ids=inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
             **gen_kwargs,
         )
-
+        
         # in case the batch is shorter than max length, the output should be padded
         if generated_tokens.shape[-1] < gen_kwargs["max_length"]:
             generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_kwargs["max_length"])
-
+        
         with torch.no_grad():
             if self.use_amp:
                 with autocast():
@@ -183,16 +189,15 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                     loss = (outputs["loss"] if isinstance(outputs, dict) else outputs[0]).mean().detach()
             else:
                 loss = None
-
+        
         if self.args.prediction_loss_only:
             return loss, None, None
-
+        
         labels = inputs["labels"]
         if labels.shape[-1] < gen_kwargs["max_length"]:
             labels = self._pad_tensors_to_max_len(labels, gen_kwargs["max_length"])
-
+        
         return loss, generated_tokens, labels
-    
     
     def get_train_dataloader(self) -> DataLoader:
         """
@@ -210,7 +215,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
         # if super.is_datasets_available() and isinstance(train_dataset, super.datasets.Dataset):
         #     print("constrained trainer 223:", True)
         #     train_dataset = self._remove_unused_columns(train_dataset, description="training")
-
+        
         if isinstance(train_dataset, torch.utils.data.IterableDataset):
             print("constrained trainer 227:", True)
             if self.args.world_size > 1:
@@ -222,7 +227,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                     num_processes=self.args.world_size,
                     process_index=self.args.process_index,
                 )
-
+            
             return DataLoader(
                 train_dataset,
                 batch_size=self.args.train_batch_size,
@@ -230,9 +235,9 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                 num_workers=self.args.dataloader_num_workers,
                 pin_memory=self.args.dataloader_pin_memory,
             )
-
+        
         train_sampler = self._get_train_sampler()
-
+        
         return DataLoader(
             train_dataset,
             batch_size=self.args.train_batch_size,
@@ -242,7 +247,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
         )
-
+    
     def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
         """
         Returns the test :class:`~torch.utils.data.DataLoader`.
@@ -256,7 +261,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
         """
         # if is_datasets_available() and isinstance(test_dataset, datasets.Dataset):
         #     test_dataset = self._remove_unused_columns(test_dataset, description="test")
-
+        
         if isinstance(test_dataset, torch.utils.data.IterableDataset):
             if self.args.world_size > 1:
                 test_dataset = IterableDatasetShard(
@@ -273,9 +278,9 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                 num_workers=self.args.dataloader_num_workers,
                 pin_memory=self.args.dataloader_pin_memory,
             )
-
+        
         test_sampler = self._get_eval_sampler(test_dataset)
-
+        
         # We use the same batch_size as for eval.
         return DataLoader(
             test_dataset,
@@ -285,7 +290,7 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             drop_last=self.args.dataloader_drop_last,
             pin_memory=self.args.dataloader_pin_memory,
         )
-
+    
     def get_eval_dataloader(self, eval_dataset: Optional[Dataset] = None) -> DataLoader:
         """
         Returns the evaluation :class:`~torch.utils.data.DataLoader`.
@@ -300,10 +305,10 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
         if eval_dataset is None and self.eval_dataset is None:
             raise ValueError("Trainer: evaluation requires an eval_dataset.")
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
-
+        
         # if is_datasets_available() and isinstance(eval_dataset, datasets.Dataset):
         #     eval_dataset = self._remove_unused_columns(eval_dataset, description="evaluation")
-
+        
         if isinstance(eval_dataset, torch.utils.data.IterableDataset):
             if self.args.world_size > 1:
                 eval_dataset = IterableDatasetShard(
@@ -320,9 +325,9 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
                 num_workers=self.args.dataloader_num_workers,
                 pin_memory=self.args.dataloader_pin_memory,
             )
-
+        
         eval_sampler = self._get_eval_sampler(eval_dataset)
-
+        
         return DataLoader(
             eval_dataset,
             sampler=eval_sampler,
@@ -332,11 +337,50 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
         )
-
-
-
-def main(): pass
-
-
-if __name__ == "__main__":
-    main()
+    
+    # def _save(self, output_dir: Optional[str] = None, state_dict=None):
+    #     # If we are executing this function, we are the process zero, so we don't check for that.
+    #     output_dir = output_dir if output_dir is not None else self.args.output_dir
+    #     os.makedirs(output_dir, exist_ok=True)
+    #     logger.info(f"Saving model checkpoint to {output_dir}")
+    #     # Save a trained model and configuration using `save_pretrained()`.
+    #     # They can then be reloaded using `from_pretrained()`
+    #     if not isinstance(self.model, PreTrainedModel):
+    #         if isinstance(unwrap_model(self.model), PreTrainedModel):
+    #             if state_dict is None:
+    #                 state_dict = self.model.state_dict()
+    #             unwrap_model(self.model).save_pretrained(output_dir, state_dict=state_dict)
+    #         elif isinstance(self.model, PrefixEncoderDecoder):
+    #             self.model.model.save_pretrained(output_dir)
+    #             self.model.prompt_generater.save_model(output_dir)
+    #         else:
+    #             logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+    #             if state_dict is None:
+    #                 state_dict = self.model.state_dict()
+    #             torch.save(state_dict, os.path.join(output_dir, WEIGHTS_NAME))
+    #     else:
+    #         self.model.save_pretrained(output_dir, state_dict=state_dict)
+    #     if self.tokenizer is not None:
+    #         self.tokenizer.save_pretrained(output_dir)
+    #
+    #     # Good practice: save your training arguments together with the trained model
+    #     torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
+    
+    # def _load_state_dict_in_model(self, state_dict):
+    #     if isinstance(self.model, PrefixEncoderDecoder):
+    #         model = self.model.model
+    #     else:
+    #         model = self.model
+    #
+    #     load_result = model.load_state_dict(state_dict, strict=False)
+    #
+    #     if len(load_result.missing_keys) != 0:
+    #         if model._keys_to_ignore_on_save is not None and set(load_result.missing_keys) == set(
+    #                 model._keys_to_ignore_on_save
+    #         ):
+    #             model.tie_weights()
+    #         else:
+    #             logger.warn(f"There were missing keys in the checkpoint model loaded: {load_result.missing_keys}.")
+    #     if len(load_result.unexpected_keys) != 0:
+    #         logger.warn(
+    #             f"There were unexpected keys in the checkpoint model loaded: {load_result.unexpected_keys}.")

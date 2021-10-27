@@ -21,6 +21,7 @@
 """
 import torch
 import inspect
+import os
 import torch.nn as nn
 
 from typing import NamedTuple
@@ -29,8 +30,10 @@ from argparse import Namespace
 from functools import partial
 from transformers import PreTrainedModel, PretrainedConfig, T5Config, GPT2Config, T5ForConditionalGeneration
 from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration
+from transformers.modeling_utils import *
 
 from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
+
 
 
 def signature(f):
@@ -68,16 +71,12 @@ def signature(f):
     return argspec(args, defaults, varargs, keywords)
 
 
-class PrefixEncoderDecoder(nn.Module):
-    def __init__(self, model: PreTrainedModel, training_args: Namespace, num_token: int = 5,
-                 prefix_dropout: float = 0.5):
-        super(PrefixEncoderDecoder, self).__init__()
-        self.model = model
-        self.config = model.config
-        self.training_args = training_args
-        self.device = training_args.device
-        self.tuning_type = training_args.tuning_type
+class PromptGenerater(nn.Module):
+    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5):
+        super(PromptGenerater, self).__init__()
         self.num_token = num_token
+        self.config = config
+        self.device = device
         
         # PLM-related parameters
         if isinstance(self.config, T5Config):
@@ -94,25 +93,6 @@ class PrefixEncoderDecoder(nn.Module):
         self.prefix_dropout = prefix_dropout
         self.dropout = nn.Dropout(self.prefix_dropout)
         
-        self.generate_parameters()  # prepare for parameter generation
-        self.is_modified_model = False
-        self.modify_model()
-    
-    def forward(self, *args, **kwargs):
-        input_ids = kwargs["input_ids"]
-        batch_size = input_ids.shape[0]
-        prefix_past_key_values = self.get_past_key_values(batch_size)
-        kwargs["prefix_key_values"] = prefix_past_key_values
-        
-        outputs = self.model(**kwargs)
-        return outputs
-    
-    def generate_parameters(self):
-        """
-        get prompt encoder
-        Returns:
-
-        """
         self.input_tokens = nn.Parameter(torch.arange(self.num_token).long(),
                                          requires_grad=False).to(self.device)
         self.wte = nn.Embedding(self.num_token, self.n_embd).to(self.device)
@@ -132,10 +112,8 @@ class PrefixEncoderDecoder(nn.Module):
             nn.Linear(self.mid_dim, self.mid_dim),
             nn.Tanh(),
             nn.Linear(self.mid_dim, self.n_decoder_layer * 2 * self.n_embd)).to(self.device)
-        
-        pass
     
-    def get_past_key_values(self, batch_size: int):
+    def forward(self, batch_size: int):
         # encoder
         input_tokens = self.input_tokens.unsqueeze(0).expand(batch_size, -1)
         temp_control = self.wte(input_tokens)
@@ -158,11 +136,43 @@ class PrefixEncoderDecoder(nn.Module):
         decoder_past_key_values = decoder_past_key_values.permute([2, 0, 3, 1, 4]).split(2)
         
         return past_key_values, decoder_past_key_values
+
+    def save_model(self, path):
+        path = os.path.join(path, "prompt_generater.bin")
+        torch.save(self.state_dict(), path)
+
+    def load_model(self, path: str):
+        path = os.path.join(path, "prompt_generater.bin")
+        self.load_state_dict(torch.load(path))
+
+
+class PrefixEncoderDecoder(nn.Module):
+    def __init__(self, model: PreTrainedModel, prompt_generater: PromptGenerater, training_args: Namespace):
+        super(PrefixEncoderDecoder, self).__init__()
+        self.model = model
+        self.prompt_generater = prompt_generater
+        self.config = model.config
+        self.training_args = training_args
+        self.device = training_args.device
+        self.tuning_type = training_args.tuning_type
+        
+        self.num_token = self.prompt_generater.num_token
+        
+        self.is_modified_model = False
+        self.modify_model()
+    
+    def forward(self, *args, **kwargs):
+        input_ids = kwargs["input_ids"]
+        batch_size = input_ids.shape[0]
+        prefix_past_key_values = self.prompt_generater(batch_size)
+        kwargs["prefix_key_values"] = prefix_past_key_values
+        
+        outputs = self.model(**kwargs)
+        return outputs
     
     def modify_model(self):
         if self.is_modified_model:
             return None
-        
         if self.tuning_type == "prefix":
             for pp in self.model.parameters():
                 pp.requires_grad = False
@@ -224,8 +234,14 @@ class PrefixEncoderDecoder(nn.Module):
     
     def generate(self, *args, **kwargs):
         batch_size = kwargs["attention_mask"].size(0)
-        prefix_past_key_values = self.get_past_key_values(batch_size)
+        prefix_past_key_values = self.prompt_generater(batch_size)
         kwargs["prefix_key_values"] = prefix_past_key_values
         return self.model.generate(*args, **kwargs)
-
-
+    
+    def save_model(self, path):
+        path = os.path.join(path, "prompt_generater.bin")
+        torch.save(self.state_dict(), path)
+    
+    def load_model(self, path: str):
+        path = os.path.join(path, "prompt_generater.bin")
+        self.load_state_dict(torch.load(path))

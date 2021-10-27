@@ -30,20 +30,20 @@ def get_cmd():
     source_data = "oneie/oneie_23_training"
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        source_output_dir = f"models/source_{tuning_type}_{source_data.split('/')[1]}_{current_time}"
+        source_output_dir = f"./models/source_{tuning_type}_{source_data.split('/')[1]}_{current_time}"
         print(source_output_dir)
         # training on source domain
         for model_name in ["t5-base"]:
-            for epoch in [30]:
+            for epoch in [60]:
                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                       f"-d 0 " \
                       f"-f tree " \
-                      f"-m {model_name} " \
-                      f"--label_smoothing 0 " \
+                      f"-m {model_name}  " \
                       f"-l 5e-5 " \
+                      f"--label_smoothing 0 " \
                       f"--lr_scheduler linear " \
                       f"--warmup_steps 2000 " \
-                      f"-b 16 " \
+                      f"-b 8 " \
                       f"--epoch {epoch} " \
                       f"--data {source_data} " \
                       f"--output_dir {source_output_dir} " \
@@ -56,10 +56,10 @@ def get_cmd():
         """
         # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
 
-        for epoch in [30]:
+        for epoch in [120]:
             for shot in [1, 2, 5, 10, 15]:
                 for data in [f"oneie/oneie_{str(shot)}_ft"]:
-                    target_output_dir = f"models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                    target_output_dir = f"./models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                     print(target_output_dir)
                     cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                           f"-d 0 " \
@@ -69,7 +69,7 @@ def get_cmd():
                           f"-l 5e-5 " \
                           f"--lr_scheduler linear " \
                           f"--warmup_steps 2000 " \
-                          f"-b 16 " \
+                          f"-b 8 " \
                           f"--epoch {epoch} " \
                           f"--data {data} " \
                           f"--output_dir {target_output_dir} " \

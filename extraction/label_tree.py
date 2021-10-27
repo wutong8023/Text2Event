@@ -2,7 +2,6 @@ from typing import Dict
 
 from transformers import AutoTokenizer
 
-
 def list_dictionary(d, n_tab=-1):
     if isinstance(d, list):
         for i in d:

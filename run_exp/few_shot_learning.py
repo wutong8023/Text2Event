@@ -29,7 +29,7 @@ def get_cmd():
     info_list = []
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        for epoch in [60]:
+        for epoch in [120]:
             for model in ["t5-base"]:
                 for shot in [1, 2, 5, 10, 15]:
                     for data in [f"oneie/few_shot_{str(shot)}"]:
