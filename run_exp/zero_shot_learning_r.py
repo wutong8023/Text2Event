@@ -35,9 +35,9 @@ def get_cmd():
             for is_knowledge in [True]:
                 is_knowledge = "--is_knowledge" if is_knowledge else ""
                 for prefix_len in [5]:
-                    for source_data in ["oneie/oneie_23_training"]:
+                    for source_data in ["oneie/rams/zsl"]:
                         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                        source_output_dir = f"models/zsl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
+                        source_output_dir = f"models/zslr_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                         print(source_output_dir)
                         # training on source domain
                         for model_name in ["t5-base"]:

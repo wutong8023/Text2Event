@@ -421,7 +421,8 @@ def main():
                                                             device=training_args.device,
                                                             num_token=training_args.prefix_len,
                                                             knowledge_file=data_args.event_schema)
-                prompt_generater.prepare_knowledge(tokenizer=tokenizer, plm=plm_model)
+                prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+                
             elif training_args.no_module:
                 prompt_generater = EmbeddingPromptGenerater(config=config,
                                                             device=training_args.device,

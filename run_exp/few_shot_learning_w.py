@@ -27,7 +27,7 @@ from datetime import datetime
 def get_cmd():
     cmd_list = []
     info_list = []
-    for tuning_type in ["prefix"]:
+    for tuning_type in ["both", "fine", "prefix"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [120]:
             for is_knowledge in [False]:
