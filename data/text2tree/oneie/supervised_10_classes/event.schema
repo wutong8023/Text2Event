@@ -1,0 +1,3 @@
+["Start-Org", "Release-Parole", "Declare-Bankruptcy", "Be-Born", "Sue", "Demonstrate", "Start-Position", "Transfer-Ownership", "Phone-Write", "Transport"]
+["Vehicle", "Person", "Artifact", "Place", "Org", "Buyer", "Destination", "Entity", "Defendant", "Plaintiff", "Agent", "Seller", "Origin"]
+{"Start-Org": ["Place", "Agent", "Org"], "Declare-Bankruptcy": ["Org"], "Be-Born": ["Person"], "Sue": ["Defendant", "Plaintiff"], "Demonstrate": ["Entity", "Place"], "Start-Position": ["Entity", "Place", "Person"], "Transfer-Ownership": ["Place", "Seller", "Artifact", "Buyer"], "Phone-Write": ["Entity"], "Transport": ["Artifact", "Vehicle", "Agent", "Destination", "Origin"]}
