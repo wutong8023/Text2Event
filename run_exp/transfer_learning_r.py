@@ -28,7 +28,7 @@ def get_cmd():
     cmd_list = []
     info_list = []
     source_data = "oneie/oneie_23_training"
-    for tuning_type in ["fine"]:
+    for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         source_output_dir = f"./models/source_{tuning_type}_{source_data.split('/')[1]}_{current_time}"
         print(source_output_dir)

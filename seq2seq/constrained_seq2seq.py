@@ -17,6 +17,7 @@ from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
 )
+
 from transformers.modeling_utils import unwrap_model
 from transformers.file_utils import WEIGHTS_NAME
 from transformers.trainer_pt_utils import IterableDatasetShard
@@ -88,6 +89,8 @@ class ConstraintSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
                                       metadata={"help": "Whether to use sum token loss for label smoothing"})
     tuning_type: str = field(default="both", metadata={"help": "tuning type in both, prefix or fine-tuning"})
     prefix_len: int = field(default=5, metadata={"help": "length of prefix tokens"})
+    is_knowledge: bool = field(default=False, metadata={"help": "use knowledge-enhanced prompt generation or not."})
+    no_module: bool = field(default=False, metadata={"help": "use nn to generate prefix or not"})
 
 
 class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):

@@ -17,10 +17,13 @@ export decoding_format='tree'
 export eval_steps=500
 export warmup_steps=0
 export tuning_type="both"
+export is_knowledge=""
+export no_module=""
+export prefix_len=10
 export output_dir="models/"
 export constraint_decoding='--constraint_decoding'
 
-OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,warmup_steps:,tuning_type:,output_dir:,wo_constraint_decoding -n 'parse-options' -- "$@")
+OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,wo_constraint_decoding -n 'parse-options' -- "$@")
 
 if [ $? != 0 ]; then
   echo "Failed parsing options." >&2
@@ -86,8 +89,23 @@ while true; do
     shift
     shift
     ;;
+  --prefix_len)
+    prefix_len="$2"
+    shift
+    shift
+    ;;
   --eval_steps)
     eval_steps="$2"
+    shift
+    shift
+    ;;
+  --is_knowledge)
+    is_knowledge="--is_knowledge"
+    shift
+    shift
+    ;;
+  --no_module)
+    no_module="--no_module"
     shift
     shift
     ;;
@@ -161,4 +179,7 @@ CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python run_seq2seq_prefix.py \
     --warmup_steps ${warmup_steps} \
     --source_prefix="${task_name}: " \
     --seed=${seed} \
+    ${is_knowledge} \
+    ${no_module} \
+    --prefix_len=${prefix_len} \
     --tuning_type=${tuning_type}

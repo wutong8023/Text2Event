@@ -30,22 +30,27 @@ def get_cmd():
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [60]:
-            for model in ["t5-base"]:
-                for data in ["oneie/oneie_33_training"]:
-                    target_output_dir = f"models/fsl_{tuning_type}_{data.split('/')[1]}_{current_time}"
-                    cmd = f"bash run_seq2seq_verbose_prefix.bash " \
-                          f"-d 0 " \
-                          f"-f tree " \
-                          f"-m {model} " \
-                          f"--label_smoothing 0 " \
-                          f"-l 5e-5 " \
-                          f"--lr_scheduler linear " \
-                          f"--warmup_steps 2000 " \
-                          f"-b 16 " \
-                          f"--epoch {epoch} " \
-                          f"--data {data} " \
-                          f"--output_dir {target_output_dir} " \
-                          f"--tuning_type {tuning_type} "
-                    info_list.append(f"sl_{tuning_type}")
-                    cmd_list.append(cmd)
+            for no_module in [True]:
+                no_module = "--no_module" if no_module else ""
+                for model in ["t5-base"]:
+                    for prefix_len in [20]:
+                        for data in ["oneie/oneie_33_training"]:
+                            target_output_dir = f"models/sl_{tuning_type}_{data.split('/')[1]}_{current_time}"
+                            cmd = f"bash run_seq2seq_verbose_prefix.bash " \
+                                  f"-d 0 " \
+                                  f"-f tree " \
+                                  f"-m {model} " \
+                                  f"--label_smoothing 0 " \
+                                  f"-l 5e-5 " \
+                                  f"--lr_scheduler linear " \
+                                  f"--warmup_steps 2000 " \
+                                  f"-b 16 " \
+                                  f"--prefix_len {prefix_len} "\
+                                  f"{no_module} " \
+                                  f"--epoch {epoch} " \
+                                  f"--data {data} " \
+                                  f"--output_dir {target_output_dir} " \
+                                  f"--tuning_type {tuning_type} "
+                            info_list.append(f"sl_{tuning_type}")
+                            cmd_list.append(cmd)
     return cmd_list, info_list

@@ -26,9 +26,18 @@ import time
 from argparse import ArgumentParser
 
 import run_exp.transfer_learning as tl
+
 import run_exp.few_shot_learning as fsl
+import run_exp.few_shot_learning_r as fslr
+import run_exp.few_shot_learning_w as fslw
+
 import run_exp.zero_shot_learning as zsl
+
 import run_exp.supervised_learning as sl
+
+
+
+
 
 
 def batch_submit_multi_jobs(cmd_list, info_list, platform: str, split_num: int = 4, partition="g"):
@@ -123,9 +132,19 @@ def batch_cancel(job_start: int, num: int, platform: str):
 
 
 if __name__ == '__main__':
+    exps = {
+        "fsl": fsl,
+        "fslr": fslr,
+        "fslw": fslw,
+
+        "zsl": zsl,
+        "sl": sl,
+        "tl": tl,
+    }
+    
     parser = ArgumentParser()
     parser.add_argument("--exp", default="fsl", type=str, help="experiment id",
-                        choices=["fsl", "sl", "zsl", "tl"])
+                        choices=exps.keys())
     parser.add_argument("--split", default=3, type=int, help="experiment id")
     parser.add_argument("--pltf", default="group", type=str, help="cluster: m3, group",
                         choices=["m3", "group"])
@@ -134,12 +153,6 @@ if __name__ == '__main__':
     parser.add_argument("--range", type=int)
     args = parser.parse_args()
     
-    exps = {
-        "fsl": fsl,
-        "zsl": zsl,
-        "sl": sl,
-        "tl": tl
-    }
     
     cmd_list, info_list = exps[args.exp].get_cmd()
     
