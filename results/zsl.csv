@@ -1,0 +1,4 @@
+file_name, test_role_F1, test_role_P, test_role_R, test_trigger_F1, test_trigger_P, test_trigger_R,
+zslw_both_--is_knowledge_len5_wikievents_2021-11-04-04-18, 12.6582, 64.8148, 7.014, 17.1558, 57.5758, 10.0796, 
+zslw_fine_--is_knowledge_len5_wikievents_2021-11-04-04-18, 6.8966, 78.2609, 3.6072, 5.379, 34.375, 2.9178, 
+zslw_prefix_--is_knowledge_len5_wikievents_2021-11-04-04-18, 0.0, 0.0, 0.0, 5.9801, 8.0, 4.7745, 

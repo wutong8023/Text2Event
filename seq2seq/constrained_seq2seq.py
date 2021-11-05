@@ -92,7 +92,6 @@ class ConstraintSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     is_knowledge: bool = field(default=False, metadata={"help": "use knowledge-enhanced prompt generation or not."})
     no_module: bool = field(default=False, metadata={"help": "use nn to generate prefix or not"})
 
-
 class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
     def __init__(self, decoding_type_schema=None, decoding_format='tree', source_prefix=None, *args, **kwargs):
         super().__init__(*args, **kwargs)

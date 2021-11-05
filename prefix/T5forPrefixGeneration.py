@@ -1031,6 +1031,7 @@ class T5Stack(T5PreTrainedModel):
 
             # layer_outputs is a tuple with:
             # hidden-states, key-value-states, (self-attention position bias), (self-attention weights), (cross-attention position bias), (cross-attention weights)
+            
             if use_cache is False:
                 layer_outputs = layer_outputs[:1] + (None,) + layer_outputs[1:]
 
