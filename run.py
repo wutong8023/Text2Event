@@ -25,6 +25,8 @@ import time
 
 from argparse import ArgumentParser
 
+import run_exp.test_bed as tb
+
 import run_exp.transfer_learning as tl
 
 import run_exp.few_shot_learning as fsl
@@ -146,6 +148,8 @@ if __name__ == '__main__':
         
         "sl": sl,
         "tl": tl,
+        
+        "tb": tb,
     }
     
     parser = ArgumentParser()

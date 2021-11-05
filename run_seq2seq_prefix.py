@@ -46,7 +46,11 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from extraction.event_schema import EventSchema
 from extraction.extraction_metrics import decoding_format_dict, get_extract_metrics
 from seq2seq.constrained_seq2seq import ConstraintSeq2SeqTrainingArguments, ConstraintSeq2SeqTrainer
-from prefix.prefix_model import PrefixEncoderDecoder, PromptGenerater, KnowledgePromptGenerater, EmbeddingPromptGenerater
+from prefix.prefix_model import (PrefixEncoderDecoder,
+                                 PromptGenerater,
+                                 KnowledgePromptGenerater,
+                                 EmbeddingPromptGenerater,
+                                 AdapterGenerater)
 from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
 
 # if not os.path.exists("~/nltk_data/tokenizers/punkt"):
@@ -405,46 +409,58 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-    else:
-        if model_args.model_name_or_path == "t5-base":
-            plm_model = T5ForPrefixGeneration.from_pretrained(
-                model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
-                config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                use_auth_token=True if model_args.use_auth_token else None,
-            )
-            
-            if training_args.is_knowledge:
-                prompt_generater = KnowledgePromptGenerater(config=config,
-                                                            device=training_args.device,
-                                                            num_token=training_args.prefix_len,
-                                                            knowledge_file=data_args.event_schema)
-                prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
-                
-            elif training_args.no_module:
-                prompt_generater = EmbeddingPromptGenerater(config=config,
-                                                            device=training_args.device,
-                                                            num_token=training_args.prefix_len)
-            else:
-                prompt_generater = PromptGenerater(config=config,
-                                                   device=training_args.device,
-                                                   num_token=training_args.prefix_len)
-            
-            model = PrefixEncoderDecoder(model=plm_model,
-                                         prompt_generater=prompt_generater,
-                                         training_args=training_args)
+    elif training_args.tuning_type in ["adapter", "both_adapter"] and model_args.model_name_or_path == "t5-base":
+        plm_model = T5ForPrefixGeneration.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        prompt_generater = AdapterGenerater(config)
+        model = PrefixEncoderDecoder(model=plm_model,
+                                     prompt_generater=prompt_generater,
+                                     training_args=training_args)
+    elif training_args.tuning_type in ["prefix", "both"] and model_args.model_name_or_path == "t5-base":
+        plm_model = T5ForPrefixGeneration.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        
+        if training_args.is_knowledge:
+            prompt_generater = KnowledgePromptGenerater(config=config,
+                                                        device=training_args.device,
+                                                        num_token=training_args.prefix_len,
+                                                        knowledge_file=data_args.event_schema)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+        
+        elif training_args.no_module:
+            prompt_generater = EmbeddingPromptGenerater(config=config,
+                                                        device=training_args.device,
+                                                        num_token=training_args.prefix_len)
         else:
-            # load the wrapped pretrained language model
-            model = T5ForPrefixGeneration.from_pretrained(
-                model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
-                config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                use_auth_token=True if model_args.use_auth_token else None,
-            )
+            prompt_generater = PromptGenerater(config=config,
+                                               device=training_args.device,
+                                               num_token=training_args.prefix_len)
+        
+        model = PrefixEncoderDecoder(model=plm_model,
+                                     prompt_generater=prompt_generater,
+                                     training_args=training_args)
+    else:
+        # load the wrapped pretrained language model
+        model = T5ForPrefixGeneration.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
     
     if tokenizer.encode("<extra_id_0> <extra_id_1>") != [32099, 32098, 1]:
         # For non-t5 tokenizer

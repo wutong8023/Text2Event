@@ -27,16 +27,16 @@ from datetime import datetime
 def get_cmd():
     cmd_list = []
     info_list = []
-    for tuning_type in ["prefix"]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        for epoch in [1]:
+        for epoch in [120]:
             for prefix_len in [5]:
-                for is_knowledge in [True]:
-                    is_knowledge = "--is_knowledge" if is_knowledge else ""
+                for is_knowledge in [True, False]:
+                    is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
                     for no_module in [False]:
                         no_module = "--no_module" if no_module else ""
                         for model in ["t5-base"]:
-                            for shot in [1]:
+                            for shot in [1, 2, 5, 10, 15]:
                                 for data in [f"oneie/few_shot_{str(shot)}"]:
                                     target_output_dir = f"models/fsl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}"
                                     cmd = f"bash run_seq2seq_verbose_prefix.bash " \
@@ -55,6 +55,7 @@ def get_cmd():
                                           f"--data {data} " \
                                           f"--output_dir {target_output_dir} " \
                                           f"--tuning_type {tuning_type} "
-                                    info_list.append(target_output_dir.split("/")[-1])
-                                    cmd_list.append(cmd)
+                                    if cmd not in cmd_list:
+                                        info_list.append(target_output_dir.split("/")[-1])
+                                        cmd_list.append(cmd)
     return cmd_list, info_list

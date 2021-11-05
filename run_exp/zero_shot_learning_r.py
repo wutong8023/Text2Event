@@ -29,11 +29,11 @@ def get_cmd():
     cmd_list = []
     info_list = []
     
-    for tuning_type in ["prefix", "both", "fine"]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         for no_module in [False]:
             no_module = "--no_module" if no_module else ""
-            for is_knowledge in [True]:
-                is_knowledge = "--is_knowledge" if is_knowledge else ""
+            for is_knowledge in [True, False]:
+                is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
                 for prefix_len in [5]:
                     for source_data in ["oneie/rams/zsl"]:
                         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
@@ -50,13 +50,14 @@ def get_cmd():
                                       f"-l 5e-5 " \
                                       f"--lr_scheduler linear " \
                                       f"--warmup_steps 2000 " \
-                                      f"-b 16 " \
+                                      f"-b 8 " \
                                       f"--epoch {epoch} " \
                                       f"--data {source_data} " \
                                       f"--output_dir {source_output_dir} " \
                                       f"--tuning_type {tuning_type} "
-                                info_list.append(source_output_dir.split("/")[-1])
-                                cmd_list.append(cmd)
+                                if cmd not in cmd_list:
+                                    info_list.append(source_output_dir.split("/")[-1])
+                                    cmd_list.append(cmd)
                         # transfer learning
                         """
                         models/CF_${date}-${time}_${model_name_log}_${tuning_type}_${data_name}

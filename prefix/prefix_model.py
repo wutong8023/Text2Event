@@ -23,6 +23,7 @@ import torch
 import inspect
 import os
 import json
+import copy
 import torch.nn as nn
 
 from typing import NamedTuple
@@ -340,6 +341,25 @@ class KnowledgePromptGenerater(PromptGenerater):
             return past_key_values
 
 
+class AdapterGenerater(PromptGenerater):
+    def __init__(self, config):
+        super(AdapterGenerater, self).__init__(config)
+        
+        self.adapter_module = nn.Sequential(
+            nn.Linear(self.n_embd, self.mid_dim),
+            nn.Tanh(),
+            nn.Linear(self.mid_dim, self.n_embd)
+        )
+        
+        self.encoder_adapter_module_list = nn.ModuleList(
+            [copy.deepcopy(self.adapter_module) for i in range(self.n_layer)]
+        )
+        
+        self.decoder_adapter_module_list = nn.ModuleList(
+            [copy.deepcopy(self.adapter_module) for i in range(self.n_decoder_layer)]
+        )
+
+
 class PrefixEncoderDecoder(nn.Module):
     def __init__(self, model: PreTrainedModel, prompt_generater: PromptGenerater, training_args: Namespace):
         super(PrefixEncoderDecoder, self).__init__()
@@ -354,21 +374,28 @@ class PrefixEncoderDecoder(nn.Module):
         self.num_token = self.prompt_generater.num_token
         
         self.is_modified_model = False
-        self.modify_model()
+        
+        if "adapter" in self.tuning_type:
+            self.modify_model_adapter()
+        else:
+            self.modify_model()
     
     def forward(self, *args, **kwargs):
         input_ids = kwargs["input_ids"]
         batch_size = input_ids.shape[0]
         
-        if self.is_knowledge:
-            self.prompt_generater.encode_knowledge(plm=self.model)
-            prefix_past_key_values = self.prompt_generater(batch_size=batch_size, is_decoder=False)
-            kwargs["prefix_key_values"] = [prefix_past_key_values]
+        if "adapter" in self.tuning_type:
+            outputs = self.model(**kwargs)
         else:
-            prefix_past_key_values = self.prompt_generater(batch_size)
-            kwargs["prefix_key_values"] = prefix_past_key_values
+            if self.is_knowledge:
+                self.prompt_generater.encode_knowledge(plm=self.model)
+                prefix_past_key_values = self.prompt_generater(batch_size=batch_size, is_decoder=False)
+                kwargs["prefix_key_values"] = [prefix_past_key_values]
+            else:
+                prefix_past_key_values = self.prompt_generater(batch_size)
+                kwargs["prefix_key_values"] = prefix_past_key_values
+            outputs = self.model(**kwargs)
         
-        outputs = self.model(**kwargs)
         return outputs
     
     def modify_model(self):
@@ -456,13 +483,76 @@ class PrefixEncoderDecoder(nn.Module):
             self.backup_decoder_self_attn_forward_functions = backup_decoder_self_attn_forward_functions
             self.backup_decoder_cross_attn_forward_functions = backup_decoder_cross_attn_forward_functions
     
+    def modify_model_adapter(self):
+        if self.is_modified_model:
+            return None
+        if self.tuning_type == "adapter":  # otherwise both_adapter
+            for pp in self.model.parameters():
+                pp.requires_grad = False
+        
+        if isinstance(self.model, T5ForPrefixGeneration):
+            
+            # for encoder
+            backup_encoder_forward_functions = []
+            for i, layer_module in enumerate(self.model.encoder.block):
+                backup_encoder_forward_functions.append(layer_module.layer[0].forward)
+                
+                def modified_encoder_forward(*args, **kwargs):
+                    layer_id = kwargs.pop('layer_id')
+                    layer_output = backup_encoder_forward_functions[layer_id](*args, **kwargs)
+                    
+                    hidden_states = layer_output[0]
+                    adapted_hidden_states = self.prompt_generater.encoder_adapter_module_list[i](hidden_states)
+                    hidden_states = torch.add(hidden_states, adapted_hidden_states)
+                    layer_output = list(layer_output)
+                    layer_output[0] = hidden_states
+                    layer_output = tuple(layer_output)
+                    return layer_output
+                
+                layer_module.layer[0].forward = partial(modified_encoder_forward, layer_id=i)
+            
+            # for decoder
+            backup_decoder_self_attn_forward_functions = []
+            backup_decoder_cross_attn_forward_functions = []
+            for i, layer_module in enumerate(self.model.decoder.block):
+                backup_decoder_self_attn_forward_functions.append(layer_module.layer[0].forward)
+                
+                def modified_decoder_self_attn_forward(*args, **kwargs):
+                    layer_id = kwargs.pop('layer_id')
+                    layer_output = backup_decoder_self_attn_forward_functions[layer_id](*args, **kwargs)
+                    
+                    hidden_states = layer_output[0]
+                    adapted_hidden_states = self.prompt_generater.encoder_adapter_module_list[i](hidden_states)
+                    hidden_states = torch.add(hidden_states, adapted_hidden_states)
+                    layer_output = list(layer_output)
+                    layer_output[0] = hidden_states
+                    layer_output = tuple(layer_output)
+                    return layer_output
+                
+                layer_module.layer[0].forward = partial(modified_decoder_self_attn_forward, layer_id=i)
+                backup_decoder_cross_attn_forward_functions.append(layer_module.layer[1].forward)
+                
+                def modified_decoder_cross_attn_forward(*args, **kwargs):
+                    layer_id = kwargs.pop('layer_id')
+                    return backup_decoder_cross_attn_forward_functions[layer_id](*args, **kwargs)
+                
+                layer_module.layer[1].forward = partial(modified_decoder_cross_attn_forward, layer_id=i)
+            
+            self.backup_encoder_forward_functions = backup_encoder_forward_functions
+            self.backup_decoder_self_attn_forward_functions = backup_decoder_self_attn_forward_functions
+            self.backup_decoder_cross_attn_forward_functions = backup_decoder_cross_attn_forward_functions
+    
     def generate(self, *args, **kwargs):
         batch_size = kwargs["attention_mask"].size(0)
-        if self.is_knowledge:
-            self.prompt_generater.encode_knowledge(plm=self.model)
-            prefix_past_key_values = self.prompt_generater(batch_size=batch_size, is_decoder=False)
-            kwargs["prefix_key_values"] = [prefix_past_key_values]
+        if "adapter" in self.tuning_type:
+            return self.model.generate(*args, **kwargs)
         else:
-            prefix_past_key_values = self.prompt_generater(batch_size)
-            kwargs["prefix_key_values"] = prefix_past_key_values
-        return self.model.generate(*args, **kwargs)
+            if self.is_knowledge:
+                self.prompt_generater.encode_knowledge(plm=self.model)
+                prefix_past_key_values = self.prompt_generater(batch_size=batch_size, is_decoder=False)
+                kwargs["prefix_key_values"] = [prefix_past_key_values]
+            else:
+                prefix_past_key_values = self.prompt_generater(batch_size)
+                kwargs["prefix_key_values"] = prefix_past_key_values
+            
+            return self.model.generate(*args, **kwargs)

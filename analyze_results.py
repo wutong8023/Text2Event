@@ -88,11 +88,11 @@ def format_result_to_csv(result: Result):
     return record_str
 
 
-def save_csv(result_dir: str, data: List[str], name_prefix: str = None, mode: str = "w"):
+def save_csv(result_dir: str, data: List[str], name_prefix: str = None, mode: str = "w", pltf:str="m3"):
     if name_prefix is None:
-        out_file_path = os.path.join(result_dir, "all.csv")
+        out_file_path = os.path.join(result_dir, f"{pltf}_all.csv")
     else:
-        out_file_path = os.path.join(result_dir, f"{name_prefix}.csv")
+        out_file_path = os.path.join(result_dir, f"{pltf}_{name_prefix}.csv")
     
     with open(out_file_path, mode) as file_out:
         for line in data:
@@ -103,11 +103,12 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--name_prefix", required=False, type=str)
     parser.add_argument("--mode", required=False, default="w", choices=["a", 'w'])
+    parser.add_argument("--pltf", required=True, default="m3", choices=["m3", 'group'])
     args = parser.parse_args()
     
     models_dir = "models/"
     result_dir = "results/"
     
-    file_list = select_files(models_dir)
+    file_list = select_files(models_dir, file_prefix_name=args.name_prefix)
     csv_contect = parse_result_from_files(file_list)
-    save_csv(result_dir=result_dir, name_prefix=args.name_prefix, data=csv_contect, mode=args.mode)
+    save_csv(result_dir=result_dir, name_prefix=args.name_prefix, data=csv_contect, mode=args.mode, pltf=args.pltf)
