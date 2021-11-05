@@ -32,7 +32,8 @@ import run_exp.few_shot_learning_r as fslr
 import run_exp.few_shot_learning_w as fslw
 
 import run_exp.zero_shot_learning as zsl
-
+import run_exp.zero_shot_rams as zslr
+import run_exp.zero_shot_wiki as zslw
 import run_exp.supervised_learning as sl
 
 
@@ -136,7 +137,8 @@ if __name__ == '__main__':
         "fsl": fsl,
         "fslr": fslr,
         "fslw": fslw,
-
+        "zslr": zslr,
+        "zslw": zslw,
         "zsl": zsl,
         "sl": sl,
         "tl": tl,
