@@ -28,7 +28,7 @@ def get_cmd():
     cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
     info_list = []
-    source_data = "oneie/oneie_23_training"
+    source_data = "oneie/rams/transfer_learning/src_28"
     for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
@@ -67,8 +67,8 @@ def get_cmd():
                     # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
                     
                     for epoch in [120]:
-                        for shot in [1, 2, 5]:
-                            for data in [f"oneie/oneie_{str(shot)}_ft"]:
+                        for shot in [1, 2, 5, 10, 15]:
+                            for data in [f"oneie/rams/transfer_learning/{str(shot)}_ft"]:
                                 target_output_dir = f"./models/target_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                                 print(target_output_dir)
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \

@@ -220,13 +220,8 @@ class KnowledgePromptGenerater(PromptGenerater):
             nn.Tanh(),
             nn.Linear(self.mid_dim, self.num_token * self.n_decoder_layer * 2 * self.n_embd)).to(self.device)
         
-        self.instance_key = nn.Linear(self.n_embd, self.mid_dim)
-        self.instance_value = nn.Linear(self.n_embd, self.mid_dim)
-        self.instance_query = nn.Linear(self.n_embd, self.mid_dim)
-        
-        self.knowledge_key = nn.Linear(self.n_embd, self.mid_dim)
-        self.knowledge_value = nn.Linear(self.n_embd, self.mid_dim)
-        self.knowledge_query = nn.Linear(self.n_embd, self.mid_dim)
+        self.instance_kvq = nn.Linear(self.n_embd, self.mid_dim)
+        self.knowledge_kvq = nn.Linear(self.n_embd, self.mid_dim)
     
     def load_knowledge_from_file(self, tokenizer: PreTrainedTokenizer):
         """
@@ -248,7 +243,6 @@ class KnowledgePromptGenerater(PromptGenerater):
             self.tokenized_args = tokenizer(schema_list, return_tensors="pt", padding=True)  # decoder input ids
     
     def encode_knowledge(self, plm):
-        
         input_ids = self.tokenized_types.input_ids.to(self.device)
         # print(type(input_ids), input_ids.device, input_ids.shape)
         attention_mask = self.tokenized_types.attention_mask.to(self.device)
@@ -276,40 +270,36 @@ class KnowledgePromptGenerater(PromptGenerater):
         
         if inst is None:
             # print("line 277: know_size", knowledge.shape)
-            knowledge_value = self.knowledge_value(knowledge)  # types * mid_dim
-            knowledge = torch.mean(knowledge_value, dim=0).unsqueeze(dim=0).expand(batch_size, self.mid_dim)
+            knowledge_kvq = self.knowledge_kvq(knowledge)  # types * mid_dim
+            knowledge = torch.mean(knowledge_kvq, dim=0).unsqueeze(dim=0).expand(batch_size, self.mid_dim)
             return knowledge
         
         inst_len = inst.shape[1]
         
         # print("line 283: inst_size", inst.shape)
         inst = torch.reshape(inst, [-1, inst_len, self.n_embd])
-        inst_key = self.instance_key(inst)  # -1, inst_len, mid_dim
-        inst_value = self.instance_value(inst)  # -1, inst_len, mid_dim
-        inst_query = self.instance_query(inst)  # -1, inst_len, mid_dim
+        inst_kvq = self.instance_kvq(inst)  # -1, inst_len, mid_dim
         
         # knowledge: types * embedding
         knowledge = torch.reshape(knowledge, [-1, self.n_embd]).unsqueeze(dim=0).expand(batch_size, -1, self.n_embd)
-        knowledge_key = self.knowledge_key(knowledge)  # -1, know_len, mid_dim
-        knowledge_value = self.knowledge_value(knowledge)  # -1, know_len, mid_dim
-        knowledge_query = self.knowledge_query(knowledge)  # -1, know_len, mid_dim
+        knowledge_kvq = self.knowledge_kvq(knowledge)  # -1, know_len, mid_dim
         
         att_knowledge = torch.mul(
-            torch.unsqueeze(inst_query, dim=1),
-            torch.unsqueeze(knowledge_key, dim=2)
+            torch.unsqueeze(inst_kvq, dim=1),
+            torch.unsqueeze(knowledge_kvq, dim=2)
         )  # -1, know_len, inst_len, n_embd
         att_knowledge = torch.sum(att_knowledge, dim=2)
         att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
-        knowledge = torch.mul(att_knowledge, knowledge_value)
+        knowledge = torch.mul(att_knowledge, knowledge_kvq)
         knowledge = torch.mean(knowledge, dim=1)
         
         att_inst = torch.mul(
-            torch.unsqueeze(knowledge_query, dim=1),
-            torch.unsqueeze(inst_key, dim=2)
+            torch.unsqueeze(knowledge_kvq, dim=1),
+            torch.unsqueeze(inst_kvq, dim=2)
         )  # -1, inst_len, know_len, n_embd
         att_inst = torch.sum(att_inst, dim=2)
         att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
-        inst = torch.mul(att_inst, inst_value)
+        inst = torch.mul(att_inst, inst_kvq)
         inst = torch.mean(inst, dim=1)
         
         filtered_knowledge = torch.cat([knowledge, inst], dim=-1)

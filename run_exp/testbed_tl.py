@@ -63,7 +63,7 @@ def get_cmd():
                 for epoch in [1]:
                     for shot in [1]:
                         for data in [f"oneie/oneie_{str(shot)}_ft"]:
-                            target_output_dir = f"./testbed_models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[2]}_{current_time}"
+                            target_output_dir = f"./testbed_models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                             print(target_output_dir)
                             cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                   f"-d 0 " \

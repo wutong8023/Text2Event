@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 
 # Memory usage (MB)
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=128000
 
 #SBATCH --mail-user=wutong8023@163.com

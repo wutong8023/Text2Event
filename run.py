@@ -25,9 +25,12 @@ import time
 
 from argparse import ArgumentParser
 
-import run_exp.test_bed as tb
+import run_exp.testbed_fsl as tb_fsl
+import run_exp.testbed_tl as tb_tl
 
 import run_exp.transfer_learning as tl
+import run_exp.transfer_learning_r as tlr
+import run_exp.transfer_learning_w as tlw
 
 import run_exp.few_shot_learning as fsl
 import run_exp.few_shot_learning_r as fslr
@@ -38,10 +41,8 @@ import run_exp.zero_shot_learning_r as zslr
 import run_exp.zero_shot_learning_w as zslw
 
 import run_exp.supervised_learning as sl
-
-
-
-
+import run_exp.supervised_learning_r as slr
+import run_exp.supervised_learning_w as slw
 
 
 def batch_submit_multi_jobs(cmd_list, info_list, platform: str, split_num: int = 4, partition="g"):
@@ -140,20 +141,25 @@ if __name__ == '__main__':
         "fsl": fsl,
         "fslr": fslr,
         "fslw": fslw,
-
+        
         "zsl": zsl,
         "zslr": zslr,
         "zslw": zslw,
         
-        
         "sl": sl,
-        "tl": tl,
+        "slr": slr,
+        "slw": slw,
         
-        "tb": tb,
+        "tl": tl,
+        "tlr": tlr,
+        "tlw": tlw,
+        
+        "tb_fsl": tb_fsl,
+        "tb_tl": tb_tl
     }
     
     parser = ArgumentParser()
-    parser.add_argument("--exp", default="fsl", type=str, help="experiment id",
+    parser.add_argument("--exp", type=str, help="experiment id",
                         choices=exps.keys())
     parser.add_argument("--split", default=3, type=int, help="experiment id")
     parser.add_argument("--pltf", default="group", type=str, help="cluster: m3, group",
@@ -162,7 +168,6 @@ if __name__ == '__main__':
     parser.add_argument("--cancel", type=int)
     parser.add_argument("--range", type=int)
     args = parser.parse_args()
-    
     
     cmd_list, info_list = exps[args.exp].get_cmd()
     

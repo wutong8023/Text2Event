@@ -19,11 +19,13 @@ Fine-tuning the library models for sequence to sequence.
 # You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 
 import logging
+import torch
 import os
 import re
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
+from transformers.trainer import Trainer
 
 import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
@@ -400,18 +402,9 @@ def main():
     if tokenizer.pad_token:
         to_remove_token_list += [tokenizer.pad_token]
     
-    if training_args.tuning_type == "fine":
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-    elif training_args.tuning_type in ["adapter", "both_adapter"] and model_args.model_name_or_path == "t5-base":
+    if training_args.tuning_type in ["adapter", "both_adapter"]:
         plm_model = T5ForPrefixGeneration.from_pretrained(
-            model_args.model_name_or_path,
+            "t5-base",
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
             cache_dir=model_args.cache_dir,
@@ -422,9 +415,10 @@ def main():
         model = PrefixEncoderDecoder(model=plm_model,
                                      prompt_generater=prompt_generater,
                                      training_args=training_args)
-    elif training_args.tuning_type in ["prefix", "both"] and model_args.model_name_or_path == "t5-base":
+        
+    elif training_args.tuning_type in ["prefix", "both"]:
         plm_model = T5ForPrefixGeneration.from_pretrained(
-            model_args.model_name_or_path,
+            "t5-base",
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
             cache_dir=model_args.cache_dir,
@@ -451,9 +445,8 @@ def main():
         model = PrefixEncoderDecoder(model=plm_model,
                                      prompt_generater=prompt_generater,
                                      training_args=training_args)
-    else:
-        # load the wrapped pretrained language model
-        model = T5ForPrefixGeneration.from_pretrained(
+    else:  # fine tuning
+        model = AutoModelForSeq2SeqLM.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -461,6 +454,8 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
+
+        
     
     if tokenizer.encode("<extra_id_0> <extra_id_1>") != [32099, 32098, 1]:
         # For non-t5 tokenizer
@@ -701,6 +696,20 @@ def main():
         # else:
         #     checkpoint = None
         # TODO fix better about max_length
+        
+        # Transfer Learning
+        if "source" in model_args.model_name_or_path or "zsl" in model_args.model_name_or_path:
+            if not os.path.isfile(os.path.join(model_args.model_name_or_path, "pytorch_model.bin")):
+                raise ValueError(f"Can't find a valid checkpoint at {model_args.model_name_or_path}")
+            
+            state_dict = torch.load(os.path.join(model_args.model_name_or_path, "pytorch_model.bin"), map_location="cpu")
+            # If the model is on the GPU, it still works!
+            trainer._load_state_dict_in_model(state_dict)
+            # release memory
+            del state_dict
+            trainer._move_model_to_device(trainer.model, training_args.device)
+            print(f"model type: {type(trainer.model)}")
+
         checkpoint = None
         
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
