@@ -51,6 +51,8 @@ from seq2seq.constrained_seq2seq import ConstraintSeq2SeqTrainingArguments, Cons
 from prefix.prefix_model import (PrefixEncoderDecoder,
                                  PromptGenerater,
                                  KnowledgePromptGenerater,
+                                 HybridPromptGenerater,
+                                 HybridPromptGeneraterPlus,
                                  EmbeddingPromptGenerater,
                                  AdapterGenerater)
 from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
@@ -376,6 +378,11 @@ def main():
     # Distributed training:
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
+    
+    if training_args.tuning_type in ["adapter", "both_adapter", "prefix", "both"]:
+        model_args.config_name = 't5-base'
+        model_args.tokenizer_name = 't5-base'
+    
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -415,8 +422,8 @@ def main():
         model = PrefixEncoderDecoder(model=plm_model,
                                      prompt_generater=prompt_generater,
                                      training_args=training_args)
-        
-    elif training_args.tuning_type in ["prefix", "both"]:
+    
+    elif training_args.tuning_type in ["prefix", "both", "hybrid", "hybridpp"]:
         plm_model = T5ForPrefixGeneration.from_pretrained(
             "t5-base",
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -426,14 +433,25 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
         
-        if training_args.is_knowledge:
+        if training_args.is_knowledge and training_args.tuning_type not in ["hybrid", "hybridpp"]:
             prompt_generater = KnowledgePromptGenerater(config=config,
                                                         device=training_args.device,
                                                         num_token=training_args.prefix_len,
                                                         knowledge_file=data_args.event_schema)
             prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
-        
-        elif training_args.no_module:
+        elif training_args.is_knowledge and training_args.tuning_type == "hybrid":
+            prompt_generater = HybridPromptGenerater(config=config,
+                                                     device=training_args.device,
+                                                     num_token=training_args.prefix_len,
+                                                     knowledge_file=data_args.event_schema)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+        elif training_args.is_knowledge and training_args.tuning_type == "hybridpp":
+            prompt_generater = HybridPromptGeneraterPlus(config=config,
+                                                         device=training_args.device,
+                                                         num_token=training_args.prefix_len,
+                                                         knowledge_file=data_args.event_schema)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+        elif training_args.no_module:  # disjointed with is_knowledge
             prompt_generater = EmbeddingPromptGenerater(config=config,
                                                         device=training_args.device,
                                                         num_token=training_args.prefix_len)
@@ -454,8 +472,6 @@ def main():
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-
-        
     
     if tokenizer.encode("<extra_id_0> <extra_id_1>") != [32099, 32098, 1]:
         # For non-t5 tokenizer
@@ -700,16 +716,18 @@ def main():
         # Transfer Learning
         if "source" in model_args.model_name_or_path or "zsl" in model_args.model_name_or_path:
             if not os.path.isfile(os.path.join(model_args.model_name_or_path, "pytorch_model.bin")):
+                print(os.path.join(model_args.model_name_or_path, "pytorch_model.bin"))
                 raise ValueError(f"Can't find a valid checkpoint at {model_args.model_name_or_path}")
             
-            state_dict = torch.load(os.path.join(model_args.model_name_or_path, "pytorch_model.bin"), map_location="cpu")
+            state_dict = torch.load(os.path.join(model_args.model_name_or_path, "pytorch_model.bin"),
+                                    map_location="cpu")
             # If the model is on the GPU, it still works!
             trainer._load_state_dict_in_model(state_dict)
             # release memory
             del state_dict
             trainer._move_model_to_device(trainer.model, training_args.device)
             print(f"model type: {type(trainer.model)}")
-
+        
         checkpoint = None
         
         train_result = trainer.train(resume_from_checkpoint=checkpoint)

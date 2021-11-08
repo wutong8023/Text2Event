@@ -27,7 +27,7 @@ from datetime import datetime
 def get_cmd():
     cmd_list = []
     info_list = []
-    for tuning_type in ["both_adapter"]:
+    for tuning_type in ["hybridpp"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [1]:
             for prefix_len in [5]:

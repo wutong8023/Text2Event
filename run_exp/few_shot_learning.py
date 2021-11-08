@@ -27,12 +27,14 @@ from datetime import datetime
 def get_cmd():
     cmd_list = []
     info_list = []
-    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    for tuning_type in ["hybrid", "hydridpp"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        for epoch in [120]:
+        for epoch in [180]:
             for prefix_len in [5]:
-                for is_knowledge in [True, False]:
-                    is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
+                for is_knowledge in [True]:
+                    is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
+                                                                                        "hydridpp"] else ""
                     for no_module in [False]:
                         no_module = "--no_module" if no_module else ""
                         for model in ["t5-base"]:
@@ -48,7 +50,7 @@ def get_cmd():
                                           f"--lr_scheduler linear " \
                                           f"--warmup_steps 2000 " \
                                           f"-b 8 " \
-                                          f"--prefix_len {prefix_len} "\
+                                          f"--prefix_len {prefix_len} " \
                                           f"{is_knowledge} " \
                                           f"{no_module} " \
                                           f"--epoch {epoch} " \

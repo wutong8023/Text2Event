@@ -29,11 +29,13 @@ def get_cmd():
     cmd_list = []
     info_list = []
     
-    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    for tuning_type in ["hybrid", "hybridpp"]:
         for no_module in [False]:
             no_module = "--no_module" if no_module else ""
-            for is_knowledge in [True, False]:
-                is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
+            for is_knowledge in [True]:
+                is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
+                                                                                    "hybridpp"] else ""
                 for prefix_len in [5]:
                     for source_data in ["oneie/oneie_23_training"]:
                         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')

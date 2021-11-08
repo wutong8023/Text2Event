@@ -28,13 +28,13 @@ def get_cmd():
     cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
     info_list = []
-    source_data = "oneie/oneie_23_training"
+    source_data = "oneie/few-shot_23_test_10"
     for tuning_type in ["prefix", "both"]:
         for prefix_len in [1]:
             for is_knowledge in [False]:
                 is_knowledge = "--is_knowledge" if is_knowledge else ""
                 current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                source_output_dir = f"./models/zsl_both_--is_knowledge_len5_oneie_23_training_2021-11-04-04-17"
+                source_output_dir = f"./models/zsl_{tuning_type}_{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                 print(source_output_dir)
                 # training on source domain
                 # for model_name in ["t5-base"]:
