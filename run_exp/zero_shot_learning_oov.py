@@ -31,7 +31,7 @@ def get_cmd():
     # source_data = "oneie/oneie_23_training"
     source_data = "oneie/zsl_oov/few-shot_23_test_10"
     # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["both", "prefix"]:
+    for tuning_type in ["both", "prefix", "fine"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""

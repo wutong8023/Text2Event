@@ -29,15 +29,15 @@ def get_cmd():
     cmd_list = []
     info_list = []
     source_data = "oneie/wikievents/zsl/"
-    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["both", "fine"]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    # for tuning_type in ["both", "fine"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
                 for no_module in [False]:
                     no_module = "--no_module" if no_module else ""
                     current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                    source_output_dir = f"./models/source_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
+                    source_output_dir = f"./models/source_tlw_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                     print(source_output_dir)
                     # training on source domain
                     for model_name in ["t5-base"]:
@@ -70,7 +70,7 @@ def get_cmd():
                     for epoch in [120]:
                         for shot in [1, 2, 5]:
                             for data in [f"oneie/wikievents/tl_target_{str(shot)}"]:
-                                target_output_dir = f"./models/target_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                                target_output_dir = f"./models/target_tlw_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                                 print(target_output_dir)
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \

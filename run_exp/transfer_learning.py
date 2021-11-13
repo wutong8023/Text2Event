@@ -28,17 +28,17 @@ def get_cmd():
     cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
     info_list = []
-    # source_data = "oneie/oneie_23_training"
-    source_data = "oneie/few-shot_23_test_10"
+    source_data = "oneie/oneie_23_training"
+    # source_data = "oneie/few-shot_23_test_10"
     # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["both",]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
                 for no_module in [False]:
                     no_module = "--no_module" if no_module else ""
                     current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                    source_output_dir = f"./models/source_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
+                    source_output_dir = f"./models/source_tl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                     print(source_output_dir)
                     # training on source domain
                     for model_name in ["t5-base"]:
@@ -69,9 +69,9 @@ def get_cmd():
                     # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
                     
                     for epoch in [120]:
-                        for shot in [1, 2, 5]:
+                        for shot in [1, 2, 5, 10, 15]:
                             for data in [f"oneie/oneie_{str(shot)}_ft"]:
-                                target_output_dir = f"./models/target_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                                target_output_dir = f"./models/target_tl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                                 print(target_output_dir)
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \

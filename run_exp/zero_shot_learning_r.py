@@ -29,14 +29,14 @@ def get_cmd():
     cmd_list = []
     info_list = []
     
-    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["hybrid", "hybridpp"]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+        # for tuning_type in ["hybrid", "hybridpp"]:
         for no_module in [False]:
             no_module = "--no_module" if no_module else ""
-            for is_knowledge in [True]:
+            for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
-                for prefix_len in [5]:
+                for prefix_len in [20]:
                     for source_data in ["oneie/rams/zsl"]:
                         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
                         source_output_dir = f"models/zslr_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
@@ -56,13 +56,13 @@ def get_cmd():
                                       f"--epoch {epoch} " \
                                       f"--data {source_data} " \
                                       f"--output_dir {source_output_dir} " \
-                                      f"--tuning_type {tuning_type} "
+                                      f"--tuning_type {tuning_type} " \
+                                      f"{no_module} " \
+                                      f"{is_knowledge} " \
+                                      f"--prefix_len {prefix_len} "
+                                
                                 if cmd not in cmd_list:
                                     info_list.append(source_output_dir.split("/")[-1])
                                     cmd_list.append(cmd)
-                        # transfer learning
-                        """
-                        models/CF_${date}-${time}_${model_name_log}_${tuning_type}_${data_name}
-                        """
-                        # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
+    
     return cmd_list, info_list

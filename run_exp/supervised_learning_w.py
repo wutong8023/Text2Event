@@ -25,46 +25,37 @@ from datetime import datetime
 
 
 def get_cmd():
-    cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
     info_list = []
-    
-    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["both"]:
-        for no_module in [False]:
-            no_module = "--no_module" if no_module else ""
-            for is_knowledge in [True]:
+    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+        current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
+        for epoch in [120]:
+            for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
-                for prefix_len in [20]:
-                    for source_data in ["oneie/wikievents/supervised_33"]:
-                        current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                        source_output_dir = f"models/slw_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
-                        print(source_output_dir)
-                        # training on source domain
-                        for model_name in ["t5-base"]:
-                            for epoch in [120]:
+                for no_module in [False]:
+                    no_module = "--no_module" if no_module else ""
+                    for model in ["t5-base"]:
+                        for prefix_len in [20]:
+                            for data in ["oneie/wikievents/supervised_33"]:
+                                output_dir = f"models/slw_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \
                                       f"-f tree " \
-                                      f"-m {model_name} " \
+                                      f"-m {model} " \
                                       f"--label_smoothing 0 " \
                                       f"-l 5e-5 " \
                                       f"--lr_scheduler linear " \
                                       f"--warmup_steps 2000 " \
                                       f"-b 8 " \
+                                      f"{is_knowledge} " \
+                                      f"--prefix_len {prefix_len} " \
+                                      f"{no_module} " \
                                       f"--epoch {epoch} " \
-                                      f"--data {source_data} " \
-                                      f"--output_dir {source_output_dir} " \
+                                      f"--data {data} " \
+                                      f"--output_dir {output_dir} " \
                                       f"--tuning_type {tuning_type} "
-                                
                                 if cmd not in cmd_list:
-                                    info_list.append(source_output_dir.split("/")[-1])
+                                    info_list.append(output_dir.split("/")[-1])
                                     cmd_list.append(cmd)
-                        # transfer learning
-                        """
-                        models/CF_${date}-${time}_${model_name_log}_${tuning_type}_${data_name}
-                        """
-                        # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
     return cmd_list, info_list
-

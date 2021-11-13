@@ -27,6 +27,7 @@ from argparse import ArgumentParser
 
 import run_exp.testbed_fsl as tb_fsl
 import run_exp.testbed_tl as tb_tl
+import run_exp.testbed_zslw as tb_zslw
 
 import run_exp.transfer_learning as tl
 import run_exp.transfer_learning_r as tlr
@@ -159,7 +160,8 @@ if __name__ == '__main__':
         "tlw": tlw,
         
         "tb_fsl": tb_fsl,
-        "tb_tl": tb_tl
+        "tb_tl": tb_tl,
+        "tb_zslw": tb_zslw
     }
     
     parser = ArgumentParser()

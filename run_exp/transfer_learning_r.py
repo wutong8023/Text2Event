@@ -36,7 +36,7 @@ def get_cmd():
                 for no_module in [False]:
                     no_module = "--no_module" if no_module else ""
                     current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                    source_output_dir = f"./models/source_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
+                    source_output_dir = f"./models/source_tlr_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                     print(source_output_dir)
                     # training on source domain
                     for model_name in ["t5-base"]:
@@ -69,7 +69,7 @@ def get_cmd():
                     for epoch in [120]:
                         for shot in [1, 2, 5, 10, 15]:
                             for data in [f"oneie/rams/transfer_learning/{str(shot)}_ft"]:
-                                target_output_dir = f"./models/target_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                                target_output_dir = f"./models/target_tlr_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                                 print(target_output_dir)
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \
@@ -91,3 +91,5 @@ def get_cmd():
                                     info_list.append(target_output_dir.split("/")[-1])
                                     cmd_list.append(cmd)
     return cmd_list, info_list
+
+
