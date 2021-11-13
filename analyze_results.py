@@ -104,10 +104,15 @@ if __name__ == '__main__':
     parser.add_argument("--name_prefix", required=False, type=str)
     parser.add_argument("--mode", required=False, default="w", choices=["a", 'w'])
     parser.add_argument("--pltf", required=True, default="m3", choices=["m3", 'group'])
+    parser.add_argument("--testbed", action="store_true")
     args = parser.parse_args()
     
-    models_dir = "testbed_models/"
-    result_dir = "testbed_results/"
+    if args.testbed:
+        models_dir = "testbed_models/"
+        result_dir = "testbed_results/"
+    else:
+        models_dir = "models/"
+        result_dir = "results/"
     
     file_list = select_files(models_dir, file_prefix_name=args.name_prefix)
     csv_contect = parse_result_from_files(file_list)

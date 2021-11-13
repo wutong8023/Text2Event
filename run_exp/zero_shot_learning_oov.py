@@ -29,9 +29,9 @@ def get_cmd():
     cmd_list = []
     info_list = []
     # source_data = "oneie/oneie_23_training"
-    source_data = "oneie/few-shot_23_test_10"
+    source_data = "oneie/zsl_oov/few-shot_23_test_10"
     # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["both",]:
+    for tuning_type in ["both", "prefix"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""
@@ -68,10 +68,10 @@ def get_cmd():
                     """
                     # for model_name in [f"models_trained/CF_{date}_{tuning_type}"]:
                     
-                    for epoch in [120]:
-                        for shot in [1, 2, 5]:
-                            for data in [f"oneie/oneie_{str(shot)}_ft"]:
-                                target_output_dir = f"./models/target_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_shot{shot}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                    for epoch in [0]:
+                        for num_schema in [0, 5, 10]:
+                            for data in [f"oneie/zsl_oov/oneie_1_ft_{str(num_schema)}"]:
+                                target_output_dir = f"./models/target_oov{num_schema}_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_numschema{num_schema}_{data.split('/')[1]}_{current_time}__sourcedata-{source_data.split('/')[1]}_{current_time}"
                                 print(target_output_dir)
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \

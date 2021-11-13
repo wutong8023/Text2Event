@@ -30,7 +30,7 @@ def get_cmd():
     info_list = []
     source_data = "oneie/wikievents/zsl/"
     # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
-    for tuning_type in ["prefix", "both", "fine"]:
+    for tuning_type in ["both", "fine"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""

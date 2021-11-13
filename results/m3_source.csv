@@ -1,0 +1,12 @@
+file_name, test_role_F1, test_role_P, test_role_R, test_trigger_F1, test_trigger_P, test_trigger_R,
+source_both__len20_few-shot_23_test_10_2021-11-13-12-41, 7.1429, 10.101, 5.5249, 19.7719, 23.0088, 17.3333,
+source_both_--is_knowledge_len20_few-shot_23_test_10_2021-11-13-12-41, 4.8387, 8.9552, 3.3149, 14.1732, 17.3077, 12.0,
+
+source_prefix__len20_few-shot_23_test_10_2021-11-13-11-49, 2.9268, 12.5, 1.6575, 6.5041, 8.3333, 5.3333,
+source_prefix_--is_knowledge_len20_few-shot_23_test_10_2021-11-13-11-49, 2.9412, 13.0435, 1.6575, 16.0643, 20.202, 13.3333,
+
+source_fine__len20_few-shot_23_test_10_2021-11-13-11-53, 10.0313, 11.5942, 8.8398, 20.2166, 22.0472, 18.6667,
+
+
+source_both__len20_wikievents_2021-11-13-12-21, 11.8343, 19.2308, 8.547, 15.0943, 26.087, 10.6195,
+source_prefix__len20_wikievents_2021-11-13-12-21, 10.101, 12.3457, 8.547, 21.7195, 22.2222, 21.2389, 

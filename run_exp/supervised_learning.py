@@ -30,9 +30,9 @@ def get_cmd():
     for tuning_type in ["prefix", "both", "fine"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [120]:
-            for is_knowledge in [False]:
+            for is_knowledge in [True]:
                 is_knowledge = "--is_knowledge" if is_knowledge else ""
-                for no_module in [True]:
+                for no_module in [False]:
                     no_module = "--no_module" if no_module else ""
                     for model in ["t5-base"]:
                         for prefix_len in [20]:
@@ -46,7 +46,8 @@ def get_cmd():
                                       f"-l 5e-5 " \
                                       f"--lr_scheduler linear " \
                                       f"--warmup_steps 2000 " \
-                                      f"-b 16 " \
+                                      f"-b 8 " \
+                                      f"{is_knowledge} " \
                                       f"--prefix_len {prefix_len} " \
                                       f"{no_module} " \
                                       f"--epoch {epoch} " \
