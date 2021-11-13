@@ -28,8 +28,10 @@ def get_cmd():
     cmd_template = "bash run_seq2seq_verbose_prefix.bash -d 0 -f tree -m t5-base --label_smoothing 0 -l 5e-5 --lr_scheduler linear --warmup_steps 2000 -b 16 --tuning_type prefix"
     cmd_list = []
     info_list = []
-    source_data = "oneie/oneie_23_training"
-    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    # source_data = "oneie/oneie_23_training"
+    source_data = "oneie/few-shot_23_test_10"
+    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    for tuning_type in ["fine"]:
         for prefix_len in [20]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both"] else ""

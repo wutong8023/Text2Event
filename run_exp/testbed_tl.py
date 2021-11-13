@@ -31,29 +31,30 @@ def get_cmd():
     source_data = "oneie/few-shot_23_test_10"
     for tuning_type in ["prefix", "both"]:
         for prefix_len in [1]:
-            for is_knowledge in [False]:
+            for is_knowledge in [True]:
                 is_knowledge = "--is_knowledge" if is_knowledge else ""
                 current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-                source_output_dir = f"./models/zsl_{tuning_type}_{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
+                source_output_dir = f"./testbed_models/zsl_{tuning_type}_{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"
                 print(source_output_dir)
                 # training on source domain
-                # for model_name in ["t5-base"]:
-                #     for epoch in [120]:
-                #         cmd = f"bash run_seq2seq_verbose_prefix.bash " \
-                #               f"-d 0 " \
-                #               f"-f tree " \
-                #               f"-m {model_name}  " \
-                #               f"-l 5e-5 " \
-                #               f"--label_smoothing 0 " \
-                #               f"--lr_scheduler linear " \
-                #               f"--warmup_steps 2000 " \
-                #               f"-b 8 " \
-                #               f"--epoch {epoch} " \
-                #               f"--data {source_data} " \
-                #               f"--output_dir {source_output_dir} " \
-                #               f"--tuning_type {tuning_type} "
-                #         info_list.append(f"src_{tuning_type}")
-                #         cmd_list.append(cmd)
+                for model_name in ["t5-base"]:
+                    for epoch in [1]:
+                        cmd = f"bash run_seq2seq_verbose_prefix.bash " \
+                              f"-d 0 " \
+                              f"-f tree " \
+                              f"-m {model_name}  " \
+                              f"-l 5e-5 " \
+                              f"--label_smoothing 0 " \
+                              f"--lr_scheduler linear " \
+                              f"--warmup_steps 2000 " \
+                              f"-b 8 " \
+                              f"{is_knowledge} " \
+                              f"--epoch {epoch} " \
+                              f"--data {source_data} " \
+                              f"--output_dir {source_output_dir} " \
+                              f"--tuning_type {tuning_type} "
+                        info_list.append(f"src_{tuning_type}")
+                        cmd_list.append(cmd)
                 # transfer learning
                 """
                 models/CF_${date}-${time}_${model_name_log}_${tuning_type}_${data_name}
@@ -63,21 +64,24 @@ def get_cmd():
                 for epoch in [1]:
                     for shot in [1]:
                         for data in [f"oneie/oneie_{str(shot)}_ft"]:
-                            target_output_dir = f"./testbed_models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
-                            print(target_output_dir)
-                            cmd = f"bash run_seq2seq_verbose_prefix.bash " \
-                                  f"-d 0 " \
-                                  f"-f tree " \
-                                  f"-m {source_output_dir} " \
-                                  f"--label_smoothing 0 " \
-                                  f"-l 5e-5 " \
-                                  f"--lr_scheduler linear " \
-                                  f"--warmup_steps 2000 " \
-                                  f"-b 8 " \
-                                  f"--epoch {epoch} " \
-                                  f"--data {data} " \
-                                  f"--output_dir {target_output_dir} " \
-                                  f"--tuning_type {tuning_type} "
-                            info_list.append(f"trg_{tuning_type}_shot-{shot}")
-                            cmd_list.append(cmd)
+                            for is_knowledge in [True]:
+                                is_knowledge = "--is_knowledge" if is_knowledge else ""
+                                target_output_dir = f"./testbed_models/target_{tuning_type}_shot-{shot}_{data.split('/')[1]}__sourcedata-{source_data.split('/')[1]}_{current_time}"
+                                print(target_output_dir)
+                                cmd = f"bash run_seq2seq_verbose_prefix.bash " \
+                                      f"-d 0 " \
+                                      f"-f tree " \
+                                      f"-m {source_output_dir} " \
+                                      f"--label_smoothing 0 " \
+                                      f"-l 5e-5 " \
+                                      f"--lr_scheduler linear " \
+                                      f"--warmup_steps 2000 " \
+                                      f"-b 8 " \
+                                      f"--epoch {epoch} " \
+                                      f"{is_knowledge} " \
+                                      f"--data {data} " \
+                                      f"--output_dir {target_output_dir} " \
+                                      f"--tuning_type {tuning_type} "
+                                info_list.append(f"trg_{tuning_type}_shot-{shot}")
+                                cmd_list.append(cmd)
     return cmd_list, info_list

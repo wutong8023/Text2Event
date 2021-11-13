@@ -51,6 +51,7 @@ from seq2seq.constrained_seq2seq import ConstraintSeq2SeqTrainingArguments, Cons
 from prefix.prefix_model import (PrefixEncoderDecoder,
                                  PromptGenerater,
                                  KnowledgePromptGenerater,
+                                 KnowledgePromptGeneraterV1,
                                  HybridPromptGenerater,
                                  HybridPromptGeneraterPlus,
                                  EmbeddingPromptGenerater,
@@ -434,23 +435,24 @@ def main():
         )
         
         if training_args.is_knowledge and training_args.tuning_type not in ["hybrid", "hybridpp"]:
-            prompt_generater = KnowledgePromptGenerater(config=config,
+            print(f"data_args.event_schema: {data_args.event_schema}")
+            prompt_generater = KnowledgePromptGeneraterV1(config=config,
                                                         device=training_args.device,
                                                         num_token=training_args.prefix_len,
                                                         knowledge_file=data_args.event_schema)
-            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer, knowledge_file=data_args.event_schema)
         elif training_args.is_knowledge and training_args.tuning_type == "hybrid":
             prompt_generater = HybridPromptGenerater(config=config,
                                                      device=training_args.device,
                                                      num_token=training_args.prefix_len,
                                                      knowledge_file=data_args.event_schema)
-            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer, knowledge_file=data_args.event_schema)
         elif training_args.is_knowledge and training_args.tuning_type == "hybridpp":
             prompt_generater = HybridPromptGeneraterPlus(config=config,
                                                          device=training_args.device,
                                                          num_token=training_args.prefix_len,
                                                          knowledge_file=data_args.event_schema)
-            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer)
+            prompt_generater.load_knowledge_from_file(tokenizer=tokenizer, knowledge_file=data_args.event_schema)
         elif training_args.no_module:  # disjointed with is_knowledge
             prompt_generater = EmbeddingPromptGenerater(config=config,
                                                         device=training_args.device,
@@ -733,7 +735,7 @@ def main():
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
         if isinstance(model, PrefixEncoderDecoder):
-            model.model.config.to_json_file(os.path.join(training_args.output_dir, "config.json"))
+            model.module.config.to_json_file(os.path.join(training_args.output_dir, "config.json"))
         
         decoding_type_schema.write_to_file(
             os.path.join(

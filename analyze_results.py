@@ -106,8 +106,8 @@ if __name__ == '__main__':
     parser.add_argument("--pltf", required=True, default="m3", choices=["m3", 'group'])
     args = parser.parse_args()
     
-    models_dir = "models/"
-    result_dir = "results/"
+    models_dir = "testbed_models/"
+    result_dir = "testbed_results/"
     
     file_list = select_files(models_dir, file_prefix_name=args.name_prefix)
     csv_contect = parse_result_from_files(file_list)

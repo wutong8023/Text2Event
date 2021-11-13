@@ -23,14 +23,6 @@ try:
 except (ImportError, ModuleNotFoundError):
     NLTK_AVAILABLE = False
 
-# if NLTK_AVAILABLE:
-#     if not os.path.exists("~/nltk_data/tokenizers/punkt"):
-#         print('Start download punk')
-#         with FileLock(".lock") as lock:
-#             nltk.download("punkt", quiet=True)
-#     else:
-#         print('Skip download punk')
-
 
 def add_newline_to_end_of_each_sentence(x: str) -> str:
     """This was added to get rougeLsum scores matching published rougeL scores for BART and PEGASUS."""
