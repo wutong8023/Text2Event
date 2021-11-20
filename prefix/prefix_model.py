@@ -224,7 +224,7 @@ class KnowledgePromptGenerater(PromptGenerater):
         self.instance_kvq = nn.Linear(self.n_embd, self.mid_dim)
         self.knowledge_kvq = nn.Linear(self.n_embd, self.mid_dim)
     
-    def load_knowledge_from_file(self, tokenizer: PreTrainedTokenizer, knowledge_file:str = None):
+    def load_knowledge_from_file(self, tokenizer: PreTrainedTokenizer, knowledge_file: str = None):
         """
         load knowledge from schema
         Args:
@@ -313,7 +313,8 @@ class KnowledgePromptGenerater(PromptGenerater):
         knowledge = self.knowledge
         if is_decoder:
             assert encoder_hidden_states is not None
-            knowledge, inst = self.filter_knowledge(knowledge=knowledge, inst=encoder_hidden_states, batch_size=batch_size)  # batch_size * (2*mid_emb)
+            knowledge, inst = self.filter_knowledge(knowledge=knowledge, inst=encoder_hidden_states,
+                                                    batch_size=batch_size)  # batch_size * (2*mid_emb)
             # print(f"knowledge shape: {knowledge.shape}")
             # print(f"inst shape: {inst.shape}")
             #
@@ -362,7 +363,7 @@ class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
         
         knowledge = output.encoder_last_hidden_state.detach()  # [33, 8, 768]
         self.knowledge = torch.mean(knowledge, dim=1).squeeze()
-
+    
     def filter_knowledge(self, knowledge, knowledge_plus: Tensor = None, inst: Tensor = None, batch_size: int = 1):
         """
         knowledge filtering method
@@ -378,21 +379,21 @@ class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
             knowledge_value = self.knowledge_value(knowledge)  # types * mid_dim
             knowledge = torch.mean(knowledge_value, dim=0).unsqueeze(dim=0).expand(batch_size, -1)
             return knowledge
-    
+        
         inst_len = inst.shape[1]
-    
+        
         # print("line 283: inst_size", inst.shape)
         inst = torch.reshape(inst, [-1, inst_len, self.n_embd])
         inst_key = self.instance_key(inst)  # -1, inst_len, mid_dim
         inst_value = self.instance_value(inst)  # -1, inst_len, mid_dim
         inst_query = self.instance_query(inst)  # -1, inst_len, mid_dim
-    
+        
         # knowledge: types * embedding
         knowledge = torch.reshape(knowledge, [-1, self.n_embd]).unsqueeze(dim=0).expand(batch_size, -1, self.n_embd)
         knowledge_key = self.knowledge_key(knowledge)  # -1, know_len, mid_dim
         knowledge_value = self.knowledge_value(knowledge)  # -1, know_len, mid_dim
         knowledge_query = self.knowledge_key(knowledge)  # -1, know_len, mid_dim
-    
+        
         att_knowledge = torch.mul(
             torch.unsqueeze(inst_query, dim=1),
             torch.unsqueeze(knowledge_key, dim=2)
@@ -401,7 +402,7 @@ class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
         att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
         knowledge = torch.mul(att_knowledge, knowledge_value)
         knowledge = torch.mean(knowledge, dim=1).squeeze(dim=1)
-    
+        
         att_inst = torch.mul(
             torch.unsqueeze(knowledge_query, dim=1),
             torch.unsqueeze(inst_key, dim=2)
@@ -410,8 +411,64 @@ class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
         att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
         inst = torch.mul(att_inst, inst_value)
         inst = torch.mean(inst, dim=1).squeeze(dim=1)
-    
+        
         return knowledge, inst
+
+
+class KnowledgePromptGeneraterV2(KnowledgePromptGeneraterV1):
+    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = ""):
+        super(KnowledgePromptGeneraterV2, self).__init__(config=config, device=device, num_token=num_token,
+                                                         prefix_dropout=prefix_dropout)
+
+        self.control_trans = nn.Sequential(
+            nn.Linear(2*self.mid_dim, self.mid_dim),
+            nn.Tanh(),
+            nn.Linear(self.mid_dim, self.mid_dim),
+            nn.Tanh(),
+            nn.Linear(self.mid_dim, self.num_token * self.n_layer * 2 * self.n_embd)).to(self.device)
+
+        self.decoder_control_trans = nn.Sequential(
+            nn.Linear(3 * self.mid_dim, self.mid_dim),
+            nn.Tanh(),
+            nn.Linear(self.mid_dim, self.mid_dim),
+            nn.Tanh(),
+            nn.Linear(self.mid_dim, self.num_token * self.n_decoder_layer * 2 * self.n_embd)).to(self.device)
+        
+        self.task_conditioning = nn.Parameter(torch.rand(self.mid_dim), requires_grad=True).to(self.device)
+        self.decoder_task_conditioning = nn.Parameter(torch.rand(self.mid_dim), requires_grad=True).to(self.device)
+
+    def forward(self, batch_size: int, is_decoder: bool = False, encoder_hidden_states=None):
+        knowledge = self.knowledge
+        if is_decoder:
+            assert encoder_hidden_states is not None
+            knowledge, inst = self.filter_knowledge(knowledge=knowledge, inst=encoder_hidden_states,
+                                                    batch_size=batch_size)  # batch_size * (2*mid_emb)
+            # print(f"knowledge shape: {knowledge.shape}")
+            # print(f"inst shape: {inst.shape}")
+            #
+            decoder_task_condition = self.decoder_task_conditioning.unsqueeze(dim=0).expand([batch_size, self.mid_dim])
+            
+            filtered_knowledge = torch.cat([knowledge, inst, decoder_task_condition], dim=-1)
+            decoder_past_key_values = self.decoder_control_trans(filtered_knowledge)
+            decoder_past_key_values = decoder_past_key_values.view(batch_size, self.num_token,
+                                                                   self.match_n_decoder_layer * 2, self.match_n_head,
+                                                                   self.match_n_embd)
+            decoder_past_key_values = self.dropout(decoder_past_key_values)
+            decoder_past_key_values = decoder_past_key_values.permute([2, 0, 3, 1, 4]).split(2)
+            return decoder_past_key_values
+    
+        else:
+            task_condition = self.task_conditioning.unsqueeze(dim=0).expand([batch_size, self.mid_dim])
+            filtered_knowledge = self.filter_knowledge(knowledge=knowledge, batch_size=batch_size)
+            filtered_knowledge = torch.cat([filtered_knowledge, task_condition], dim=-1)
+    
+            past_key_values = self.control_trans(filtered_knowledge)
+            past_key_values = past_key_values.view(batch_size, self.num_token, self.match_n_layer * 2,
+                                                   self.match_n_head,
+                                                   self.match_n_embd)
+            past_key_values = self.dropout(past_key_values)
+            past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
+            return past_key_values
 
 
 class HybridPromptGenerater(KnowledgePromptGenerater):

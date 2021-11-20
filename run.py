@@ -42,6 +42,8 @@ import run_exp.zero_shot_learning_r as zslr
 import run_exp.zero_shot_learning_w as zslw
 
 import run_exp.zero_shot_learning_oov as zslo
+import run_exp.zero_shot_learning_oov_w as zslwo
+import run_exp.zero_shot_learning_oov_w_trained as zslwot
 
 import run_exp.supervised_learning as sl
 import run_exp.supervised_learning_r as slr
@@ -150,6 +152,8 @@ if __name__ == '__main__':
         "zslw": zslw,
         
         "zslo": zslo,
+        "zslwo": zslwo,
+        "zslwot": zslwot,
         
         "sl": sl,
         "slr": slr,

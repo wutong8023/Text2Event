@@ -41,6 +41,7 @@ def get_cmd():
                     for epoch in [1]:
                         cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                               f"-d 0 " \
+                              f"--no_train " \
                               f"-f tree " \
                               f"-m {model_name}  " \
                               f"-l 5e-5 " \

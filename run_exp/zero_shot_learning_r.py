@@ -29,7 +29,8 @@ def get_cmd():
     cmd_list = []
     info_list = []
     
-    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    # for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    for tuning_type in ["both"]:
         # for tuning_type in ["hybrid", "hybridpp"]:
         for no_module in [False]:
             no_module = "--no_module" if no_module else ""

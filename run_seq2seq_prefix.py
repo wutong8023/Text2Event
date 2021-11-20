@@ -52,6 +52,7 @@ from prefix.prefix_model import (PrefixEncoderDecoder,
                                  PromptGenerater,
                                  KnowledgePromptGenerater,
                                  KnowledgePromptGeneraterV1,
+                                 KnowledgePromptGeneraterV2,
                                  HybridPromptGenerater,
                                  HybridPromptGeneraterPlus,
                                  EmbeddingPromptGenerater,
@@ -437,9 +438,9 @@ def main():
         if training_args.is_knowledge and training_args.tuning_type not in ["hybrid", "hybridpp"]:
             print(f"data_args.event_schema: {data_args.event_schema}")
             prompt_generater = KnowledgePromptGeneraterV1(config=config,
-                                                        device=training_args.device,
-                                                        num_token=training_args.prefix_len,
-                                                        knowledge_file=data_args.event_schema)
+                                                          device=training_args.device,
+                                                          num_token=training_args.prefix_len,
+                                                          knowledge_file=data_args.event_schema)
             prompt_generater.load_knowledge_from_file(tokenizer=tokenizer, knowledge_file=data_args.event_schema)
         elif training_args.is_knowledge and training_args.tuning_type == "hybrid":
             prompt_generater = HybridPromptGenerater(config=config,

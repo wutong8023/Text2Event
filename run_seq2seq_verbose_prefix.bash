@@ -19,11 +19,12 @@ export warmup_steps=0
 export tuning_type="both"
 export is_knowledge=""
 export no_module=""
+export do_train="--do_train"
 export prefix_len=10
 export output_dir="models/"
 export constraint_decoding='--constraint_decoding'
 
-OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,wo_constraint_decoding -n 'parse-options' -- "$@")
+OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,wo_constraint_decoding -n 'parse-options' -- "$@")
 
 if [ $? != 0 ]; then
   echo "Failed parsing options." >&2
@@ -104,6 +105,11 @@ while true; do
     shift
     shift
     ;;
+  --no_train)
+    do_train=""
+    shift
+    shift
+    ;;
   --no_module)
     no_module="--no_module"
     shift
@@ -150,7 +156,7 @@ export TOKENIZERS_PARALLELISM=false
 
 
 CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python run_seq2seq_prefix.py \
-    --do_train --do_eval --do_predict ${constraint_decoding} \
+    ${do_train} --do_eval --do_predict ${constraint_decoding} \
     --label_smoothing_sum=False \
     --use_fast_tokenizer=False \
     --evaluation_strategy steps \
