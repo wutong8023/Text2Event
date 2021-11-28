@@ -33,10 +33,10 @@ def get_cmd():
     for tuning_type in ["both"]:
         for no_module in [False]:
             no_module = "--no_module" if no_module else ""
-            for is_knowledge in [True, False]:
+            for is_knowledge in [True]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
-                for prefix_len in [5, 20]:
+                for prefix_len in [20]:
                     for source_data in ["oneie/wikievents/zsl"]:
                         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
                         source_output_dir = f"testbed_models/zslw_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{source_data.split('/')[1]}_{current_time}"

@@ -50,7 +50,7 @@ import run_exp.supervised_learning_r as slr
 import run_exp.supervised_learning_w as slw
 
 
-def batch_submit_multi_jobs(cmd_list, info_list, platform: str, split_num: int = 4, partition="g"):
+def batch_submit_multi_jobs(cmd_list, info_list, platform: str, split_num: int = 4, partition="g", node_id:int=None):
     assert len(cmd_list) == len(info_list)
     
     content = []
@@ -85,6 +85,9 @@ def batch_submit_multi_jobs(cmd_list, info_list, platform: str, split_num: int =
             job_name = "__".join(info_list_frac[i])
             print("- JOB NAME: ", job_name)
             if platform == "group":
+                if node_id is not None:
+                    _node = f"#SBATCH --nodelist=node0{str(node_id)}"
+                    content[20] = _node
                 _info = "#SBATCH -J {job_name}\n".format(job_name=job_name)
                 content[21] = _info
                 # SBATCH -o log/fs2s-iwslt-%J.out
@@ -177,12 +180,13 @@ if __name__ == '__main__':
     parser.add_argument("--sbatch", action="store_true")
     parser.add_argument("--cancel", type=int)
     parser.add_argument("--range", type=int)
+    parser.add_argument("--node_id", type=int, required=False)
     args = parser.parse_args()
     
     cmd_list, info_list = exps[args.exp].get_cmd()
     
     if args.sbatch:
-        batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g")
+        batch_submit_multi_jobs(cmd_list, info_list, args.pltf, split_num=args.split, partition="m3g", node_id=args.node_id)
     else:
         # cmd: submit batch jobs for multi jobs
         # optional partition for m3: dgx , m3g, m3h, m3e

@@ -23,8 +23,10 @@ export do_train="--do_train"
 export prefix_len=10
 export output_dir="models/"
 export constraint_decoding='--constraint_decoding'
+export source_length=512
+export target_length=256
 
-OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,wo_constraint_decoding -n 'parse-options' -- "$@")
+OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,source_length:,target_length:,wo_constraint_decoding -n 'parse-options' -- "$@")
 
 if [ $? != 0 ]; then
   echo "Failed parsing options." >&2
@@ -100,6 +102,16 @@ while true; do
     shift
     shift
     ;;
+  --source_length)
+    source_length="$2"
+    shift
+    shift
+    ;;
+  --target_length)
+    target_length="$2"
+    shift
+    shift
+    ;;
   --is_knowledge)
     is_knowledge="--is_knowledge"
     shift
@@ -164,8 +176,8 @@ CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python run_seq2seq_prefix.py \
     --metric_for_best_model eval_role-F1 \
     --save_total_limit 1 \
     --load_best_model_at_end \
-    --max_source_length=256 \
-    --max_target_length=128 \
+    --max_source_length=${source_length} \
+    --max_target_length=${target_length} \
     --num_train_epochs=${epoch} \
     --task=${task_name} \
     --train_file=${data_folder}/train.json \
