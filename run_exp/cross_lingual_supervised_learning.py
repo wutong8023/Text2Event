@@ -29,7 +29,7 @@ def get_cmd():
     info_list = []
     for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        for epoch in [120]:
+        for epoch in [60]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
@@ -37,8 +37,22 @@ def get_cmd():
                     no_module = "--no_module" if no_module else ""
                     for model in ["google/mt5-base"]:
                         for prefix_len in [20]:
-                            for data in ["ace05-ZH/data_formatted"]:
-                                output_dir = f"models/sl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
+                            data_all = [
+                                "multi-lingual/EN_ZH_SL",
+                                "multi-lingual/EN+ZH_ZH_SL",
+                                "multi-lingual/EN+ZH_EN_SL",
+                                "multi-lingual/ZH_EN_SL",
+                                "multi-lingual/EN_AR_SL",
+                                "multi-lingual/EN+AR_AR_SL",
+                                "multi-lingual/EN+AR_EN_SL",
+                                "multi-lingual/AR_EN_SL"
+                            ]
+                            # for data in data_all[0:1]:
+                            for data in [
+                                data_all[7]
+                            ]:
+                                setting = data.split("/")[1]
+                                output_dir = f"models/cross_sl_{setting}_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \
                                       f"-f tree " \

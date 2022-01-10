@@ -29,7 +29,7 @@ def get_cmd():
     info_list = []
     for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
-        for epoch in [120]:
+        for epoch in [1000]:
             for is_knowledge in [True, False]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
@@ -38,7 +38,7 @@ def get_cmd():
                     for model in ["google/mt5-base"]:
                         for prefix_len in [20]:
                             for data in ["ace05-AR/data_formatted"]:
-                                output_dir = f"models/sl_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
+                                output_dir = f"models/mono_sl_ar_{tuning_type}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
                                 cmd = f"bash run_seq2seq_verbose_prefix.bash " \
                                       f"-d 0 " \
                                       f"-f tree " \
