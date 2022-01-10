@@ -13,7 +13,7 @@ This page categorizes the literature by the **Last Post**.
 - [![](https://img.shields.io/badge/2021-5-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/time/README.md#2021)
 - [![](https://img.shields.io/badge/2020-4-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/time/README.md#2020)
 ## Hyperlink 
-[Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
+- [Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
 -  [Summary](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./)
 -  [Application](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/application)
 -  [Approach](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/approach)

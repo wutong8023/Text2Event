@@ -16,7 +16,7 @@ This page categorizes the literature by the **Published Venue**.
 - [![](https://img.shields.io/badge/IJCAI-1-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./README.md#ijcai)
 - [![](https://img.shields.io/badge/arXiv-1-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./README.md#arxiv)
 ## Hyperlink 
-[Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
+- [Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
 -  [Summary](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./)
 -  [Application](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/application)
 -  [Approach](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/approach)
