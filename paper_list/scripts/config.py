@@ -14,7 +14,7 @@ your_research_topic_full_name = "Event Extraction"  # used for title
 bib_link_overleaf = "https://www.overleaf.com/read/rgscdxhxbwhp"  # used for overleaf
 color = "blue"
 
-base_link = f"https://github.com/{user_id}/{repo_name}/{branch_name}/paper_list"
+base_link = f"https://github.com/{user_id}/{repo_name}/{branch_name}/paper_list/"
 
 # user customized taxonomy
 fined_taxonomy = {
@@ -33,8 +33,8 @@ fined_taxonomy = {
     
     # 1: resource type
     "Contribution": ["Survey", "Important", "New Settings or Metrics", "New Application",
-             "Empirical Study", "Theory", "New Backbone Model", "New Method", "Thesis", "Library", "Workshop",
-             "Other Type"],
+                     "Empirical Study", "Theory", "New Backbone Model", "New Method", "Thesis", "Library", "Workshop",
+                     "Other Type"],
     # 2: Area
     "Area": ["CV", "NLP", "Multi-Modal", "Robotics"],
     
@@ -53,16 +53,16 @@ fined_taxonomy = {
     "Memory": ["w/ External Knowledge", "w/o External Knowledge"],
     
     # 7: Setting
-    "Setting": ["Class Incremental", "N-way K-shot", "Other Setting"],
+    "Setting": ["Sentence-level",
+                "Document-level",
+                "Paragraph-level",
+                "Monolingual",
+                "Multimodal"],
     
     # 8: Research Question
     "RQs": {
-            "Sentence-level",
-            "Document-level",
-            "Paragraph-level",
-            "Monolingual",
-            "Multimodal",
-            },
+        "Over-fitting"
+    },
     
     # 9: Backbone
     "Backbone": ["BERTs", "Transformers", "Adapter", "RNNs", "CNNs", "GNNs", "Attentions", "Capsule Net",

@@ -85,28 +85,28 @@ def get_hyperlink(hyperlinks, mapping_name):
     for i, item in enumerate(hyperlinks):
         str_hyperlink += "- "
         all_link = "![](https://img.shields.io/badge/ALL-green)"
-        nlp_link = "![](https://img.shields.io/badge/NLP-green)"
-        cv_link = "![](https://img.shields.io/badge/CV-green)"
+        # nlp_link = "![](https://img.shields.io/badge/NLP-green)"
+        # cv_link = "![](https://img.shields.io/badge/CV-green)"
 
-        str_hyperlink += f"[[NLP]]({base_link + your_research_topic}4nlp/{item})"
-        str_hyperlink += f"  [[CV]]({base_link + your_research_topic}4cv/{item})"
-        str_hyperlink += f" -- [{mapping_name[item]}]({base_link + your_research_topic}4all/{item})\n"
+        # str_hyperlink += f"[[NLP]]({base_link + your_research_topic}4nlp/{item})"
+        # str_hyperlink += f"  [[CV]]({base_link + your_research_topic}4cv/{item})"
+        str_hyperlink += f" [{mapping_name[item]}]({base_link + your_research_topic}4all/{item})\n"
     
     return str_hyperlink
 
 def plot_content(index, keys, dir_path, disc, list_type, plot_titles=plot_titles, sub_dirs=None, mapping_name=None):
-    generate_md_file(DB=bib_db, list_classif=list_type, key=keys, plot_title_fct=plot_titles,
-                     filename="README.md", add_comments=True, dir_path=sub_dirs[0][index], filter_key="keywords",
-                     filter_content=["NLP", "Multi-Modal"], mapping_name=mapping_name,
-                     discrib=disc + ", filtered by NLP area.", add_hyperlink=True, hyperlinks=dir_path,
-                     get_outline=get_outline, get_hyperlink=get_hyperlink)
-    generate_md_file(DB=bib_db, list_classif=list_type, key=keys, plot_title_fct=plot_titles,
-                     filename="README.md", add_comments=True, dir_path=sub_dirs[1][index],
-                     filter_key="keywords", mapping_name=mapping_name,
-                     filter_content=["CV", "Multi-Modal", ],
-                     discrib=disc + ", filtered by CV area.", add_hyperlink=True,
-                     hyperlinks=dir_path, get_outline=get_outline, get_hyperlink=get_hyperlink)
-    for dir_ in [sub_dirs[2][index], "./"]:
+    # generate_md_file(DB=bib_db, list_classif=list_type, key=keys, plot_title_fct=plot_titles,
+    #                  filename="README.md", add_comments=True, dir_path=sub_dirs[0][index], filter_key="keywords",
+    #                  filter_content=["NLP", "Multi-Modal"], mapping_name=mapping_name,
+    #                  discrib=disc + ", filtered by NLP area.", add_hyperlink=True, hyperlinks=dir_path,
+    #                  get_outline=get_outline, get_hyperlink=get_hyperlink)
+    # generate_md_file(DB=bib_db, list_classif=list_type, key=keys, plot_title_fct=plot_titles,
+    #                  filename="README.md", add_comments=True, dir_path=sub_dirs[1][index],
+    #                  filter_key="keywords", mapping_name=mapping_name,
+    #                  filter_content=["CV", "Multi-Modal", ],
+    #                  discrib=disc + ", filtered by CV area.", add_hyperlink=True,
+    #                  hyperlinks=dir_path, get_outline=get_outline, get_hyperlink=get_hyperlink)
+    for dir_ in [sub_dirs[0][index], "./"]:
         generate_md_file(DB=bib_db, list_classif=list_type, key=keys, plot_title_fct=plot_titles,
                          filename="README.md", add_comments=True, dir_path=dir_,
                          mapping_name=mapping_name,
@@ -138,9 +138,9 @@ mapping_name = {
     "author": "Author",
 }
 dir_path_IE4all = ["" + your_research_topic + "4all/" + dp for dp in dir_path]
-dir_path_IE4nlp = ["" + your_research_topic + "4nlp/" + dp for dp in dir_path]
-dir_path_IE4cv = ["" + your_research_topic + "4cv/" + dp for dp in dir_path]
-sub_dirs = [dir_path_IE4nlp, dir_path_IE4cv, dir_path_IE4all]
+# dir_path_IE4nlp = ["" + your_research_topic + "4nlp/" + dp for dp in dir_path]
+# dir_path_IE4cv = ["" + your_research_topic + "4cv/" + dp for dp in dir_path]
+sub_dirs = [dir_path_IE4all]
 
 # 0 Home
 list_type = [[venue] for venue in fined_taxonomy["Conference"]]
@@ -152,12 +152,12 @@ for index in indexs:
     plot_content(index=index, keys=["booktitle", "journal"], dir_path=dir_path, disc=disc, list_type=list_type,
                  sub_dirs=sub_dirs, mapping_name=mapping_name)
 
-# 1 Contribution
-list_type = [[typ] for typ in fined_taxonomy["Contribution"]]
-index = 1
-disc = "This page categorizes the literature by the Contribution"
-plot_content(index=index, keys=["keywords"], dir_path=dir_path, disc=disc, list_type=list_type, sub_dirs=sub_dirs,
-             mapping_name=mapping_name)
+# # 1 Contribution
+# list_type = [[typ] for typ in fined_taxonomy["Contribution"]]
+# index = 1
+# disc = "This page categorizes the literature by the Contribution"
+# plot_content(index=index, keys=["keywords"], dir_path=dir_path, disc=disc, list_type=list_type, sub_dirs=sub_dirs,
+#              mapping_name=mapping_name)
 
 # 2 time
 list_type = [[str(year)] for year in range(1980, 2030)][::-1]
@@ -167,11 +167,11 @@ plot_content(index=index, keys=["year"], dir_path=dir_path, disc=disc, list_type
              mapping_name=mapping_name)
 
 # 3 application
-list_type = [[app] for app in fined_taxonomy["Application"]]
-index = 3
-disc = "This page categorizes the literature by the **Continual Learning Application**"
-plot_content(index=index, keys=["keywords"], dir_path=dir_path, disc=disc, list_type=list_type, sub_dirs=sub_dirs,
-             mapping_name=mapping_name)
+# list_type = [[app] for app in fined_taxonomy["Application"]]
+# index = 3
+# disc = "This page categorizes the literature by the **Continual Learning Application**"
+# plot_content(index=index, keys=["keywords"], dir_path=dir_path, disc=disc, list_type=list_type, sub_dirs=sub_dirs,
+#              mapping_name=mapping_name)
 
 # 4 supervision
 list_type = [[sp] for sp in fined_taxonomy["Supervision"]]
