@@ -11,7 +11,7 @@ This page categorizes the literature by the **Research Questions**.
 ## Outline 
 - [![](https://img.shields.io/badge/Hyperlink-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/research_question/README.md#hyperlink)
 ## Hyperlink 
-- [[Overview]](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md) -- [Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
+[Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
 -  [Summary](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./)
 -  [Application](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/application)
 -  [Approach](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/approach)

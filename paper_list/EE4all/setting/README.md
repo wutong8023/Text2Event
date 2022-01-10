@@ -16,7 +16,7 @@ This page categorizes the literature by the **Continual Learning Setting**.
 - [![](https://img.shields.io/badge/Monolingual-8-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/setting/README.md#monolingual)
 - [![](https://img.shields.io/badge/Multimodal-1-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/setting/README.md#multimodal)
 ## Hyperlink 
-- [[Overview]](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md) -- [Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
+[Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
 -  [Summary](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./)
 -  [Application](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/application)
 -  [Approach](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/approach)

@@ -14,7 +14,7 @@ This page categorizes the literature by the **Author**.
 - [![](https://img.shields.io/badge/Xinya_Du-2-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/author/README.md#xinya-du)
 - [![](https://img.shields.io/badge/Heng_Ji-2-blue)](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/author/README.md#heng-ji)
 ## Hyperlink 
-- [[Overview]](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md) -- [Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
+[Homepage](https://github.com/wutong8023/Text2Event/blob/master/paper_list/README.md)
 -  [Summary](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/./)
 -  [Application](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/application)
 -  [Approach](https://github.com/wutong8023/Text2Event/blob/master/paper_list/EE4all/approach)
