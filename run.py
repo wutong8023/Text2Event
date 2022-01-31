@@ -49,8 +49,10 @@ import run_exp.supervised_learning as sl
 import run_exp.supervised_learning_r as slr
 import run_exp.supervised_learning_w as slw
 
-import run_exp.multi_lingual_supervised_learning_zh as msl_zz
-import run_exp.multi_lingual_supervised_learning_ar as msl_aa
+import run_exp.mono_lingual_supervised_learning_zh as msl_zz
+import run_exp.mono_lingual_supervised_learning_ar as msl_aa
+
+import run_exp.cross_lingual_supervised_learning as cls
 
 
 
@@ -176,6 +178,8 @@ if __name__ == '__main__':
         
         "msl_zz": msl_zz,  # train: zh; test: zh
         "msl_aa": msl_aa,
+        
+        "csl": cls
     }
     
     parser = ArgumentParser()

@@ -1,0 +1,7 @@
+file_name, test_role_F1, test_role_P, test_role_R, test_trigger_F1, test_trigger_P, test_trigger_R,
+mono_sl_zh_adapter__len20_data_formatted_2022-01-10-22-50, 19.2358, 16.8591, 22.3926, 24.8731, 24.8731, 24.8731, 
+mono_sl_zh_both_--is_knowledge_len20_data_formatted_2022-01-10-22-50, 19.7183, 18.2292, 21.4724, 25.4453, 25.5102, 25.3807, 
+mono_sl_zh_both__len20_data_formatted_2022-01-10-22-50, 18.2609, 17.3077, 19.3252, 24.4275, 24.4898, 24.3655, 
+mono_sl_zh_both_adapter__len20_data_formatted_2022-01-10-22-50, 18.9679, 17.3913, 20.8589, 24.1206, 23.8806, 24.3655, 
+mono_sl_zh_prefix_--is_knowledge_len20_data_formatted_2022-01-10-22-50, 20.0557, 18.3673, 22.0859, 24.9364, 25.0, 24.8731, 
+mono_sl_zh_prefix__len20_data_formatted_2022-01-10-22-50, 0.0, 0.0, 0.0, 2.5641, 2.5907, 2.5381, 

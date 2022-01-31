@@ -35,6 +35,7 @@ from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration
 from transformers.modeling_utils import *
 from transformers.trainer import Trainer
 from transformers import PreTrainedTokenizer, PreTrainedModel
+from transformers.models.mt5 import MT5Model
 
 from prefix.T5forPrefixGeneration import T5ForPrefixGeneration
 

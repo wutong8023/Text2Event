@@ -91,6 +91,8 @@ class ConstraintSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     prefix_len: int = field(default=5, metadata={"help": "length of prefix tokens"})
     is_knowledge: bool = field(default=False, metadata={"help": "use knowledge-enhanced prompt generation or not."})
     no_module: bool = field(default=False, metadata={"help": "use nn to generate prefix or not"})
+    predict_with_generate: bool = field(default=False, metadata={"help": "use predict with generate"})
+    
 
 class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
     def __init__(self, decoding_type_schema=None, decoding_format='tree', source_prefix=None, *args, **kwargs):
@@ -340,49 +342,3 @@ class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):
             pin_memory=self.args.dataloader_pin_memory,
         )
     
-    # def _save(self, output_dir: Optional[str] = None, state_dict=None):
-    #     # If we are executing this function, we are the process zero, so we don't check for that.
-    #     output_dir = output_dir if output_dir is not None else self.args.output_dir
-    #     os.makedirs(output_dir, exist_ok=True)
-    #     logger.info(f"Saving model checkpoint to {output_dir}")
-    #     # Save a trained model and configuration using `save_pretrained()`.
-    #     # They can then be reloaded using `from_pretrained()`
-    #     if not isinstance(self.model, PreTrainedModel):
-    #         if isinstance(unwrap_model(self.model), PreTrainedModel):
-    #             if state_dict is None:
-    #                 state_dict = self.model.state_dict()
-    #             unwrap_model(self.model).save_pretrained(output_dir, state_dict=state_dict)
-    #         elif isinstance(self.model, PrefixEncoderDecoder):
-    #             self.model.model.save_pretrained(output_dir)
-    #             self.model.prompt_generater.save_model(output_dir)
-    #         else:
-    #             logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
-    #             if state_dict is None:
-    #                 state_dict = self.model.state_dict()
-    #             torch.save(state_dict, os.path.join(output_dir, WEIGHTS_NAME))
-    #     else:
-    #         self.model.save_pretrained(output_dir, state_dict=state_dict)
-    #     if self.tokenizer is not None:
-    #         self.tokenizer.save_pretrained(output_dir)
-    #
-    #     # Good practice: save your training arguments together with the trained model
-    #     torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
-    
-    # def _load_state_dict_in_model(self, state_dict):
-    #     if isinstance(self.model, PrefixEncoderDecoder):
-    #         model = self.model.model
-    #     else:
-    #         model = self.model
-    #
-    #     load_result = model.load_state_dict(state_dict, strict=False)
-    #
-    #     if len(load_result.missing_keys) != 0:
-    #         if model._keys_to_ignore_on_save is not None and set(load_result.missing_keys) == set(
-    #                 model._keys_to_ignore_on_save
-    #         ):
-    #             model.tie_weights()
-    #         else:
-    #             logger.warn(f"There were missing keys in the checkpoint model loaded: {load_result.missing_keys}.")
-    #     if len(load_result.unexpected_keys) != 0:
-    #         logger.warn(
-    #             f"There were unexpected keys in the checkpoint model loaded: {load_result.unexpected_keys}.")
