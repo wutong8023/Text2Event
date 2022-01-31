@@ -440,7 +440,8 @@ def main():
             prompt_generater = KnowledgePromptGeneraterV1(config=config,
                                                           device=training_args.device,
                                                           num_token=training_args.prefix_len,
-                                                          knowledge_file=data_args.event_schema)
+                                                          knowledge_file=data_args.event_schema,
+                                                          do_cross_attention=training_args.do_cross_attention)
             prompt_generater.load_knowledge_from_file(tokenizer=tokenizer, knowledge_file=data_args.event_schema)
         elif training_args.is_knowledge and training_args.tuning_type == "hybrid":
             prompt_generater = HybridPromptGenerater(config=config,

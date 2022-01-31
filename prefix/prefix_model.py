@@ -196,7 +196,12 @@ class EmbeddingPromptGenerater(PromptGenerater):
 
 
 class KnowledgePromptGenerater(PromptGenerater):
-    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = ""):
+    """
+    instance + knowledge
+    with the unified key/value/query tensors
+    """
+    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = "",
+                 do_cross_attention: bool=True):
         super(KnowledgePromptGenerater, self).__init__(config=config, device=device, num_token=num_token,
                                                        prefix_dropout=prefix_dropout)
         self.is_knowledge = True
@@ -224,6 +229,8 @@ class KnowledgePromptGenerater(PromptGenerater):
         
         self.instance_kvq = nn.Linear(self.n_embd, self.mid_dim)
         self.knowledge_kvq = nn.Linear(self.n_embd, self.mid_dim)
+        
+        self.do_cross_attention = do_cross_attention
     
     def load_knowledge_from_file(self, tokenizer: PreTrainedTokenizer, knowledge_file: str = None):
         """
@@ -290,24 +297,28 @@ class KnowledgePromptGenerater(PromptGenerater):
         knowledge = torch.reshape(knowledge, [-1, self.n_embd]).unsqueeze(dim=0).expand(batch_size, -1, self.n_embd)
         knowledge_kvq = self.knowledge_kvq(knowledge)  # -1, know_len, mid_dim
         
-        att_knowledge = torch.mul(
-            torch.unsqueeze(inst_kvq, dim=1),
-            torch.unsqueeze(knowledge_kvq, dim=2)
-        )  # -1, know_len, inst_len, n_embd
-        att_knowledge = torch.sum(att_knowledge, dim=2)
-        att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
-        knowledge = torch.mul(att_knowledge, knowledge_kvq)
-        knowledge = torch.mean(knowledge, dim=1).squeeze(dim=1)
-        
-        att_inst = torch.mul(
-            torch.unsqueeze(knowledge_kvq, dim=1),
-            torch.unsqueeze(inst_kvq, dim=2)
-        )  # -1, inst_len, know_len, n_embd
-        att_inst = torch.sum(att_inst, dim=2)
-        att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
-        inst = torch.mul(att_inst, inst_kvq)
-        inst = torch.mean(inst, dim=1).squeeze(dim=1)
-        
+        if self.do_cross_attention:
+            att_knowledge = torch.mul(
+                torch.unsqueeze(inst_kvq, dim=1),
+                torch.unsqueeze(knowledge_kvq, dim=2)
+            )  # -1, know_len, inst_len, n_embd
+            att_knowledge = torch.sum(att_knowledge, dim=2)
+            att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
+            knowledge = torch.mul(att_knowledge, knowledge_kvq)
+            knowledge = torch.mean(knowledge, dim=1).squeeze(dim=1)
+
+            att_inst = torch.mul(
+                torch.unsqueeze(knowledge_kvq, dim=1),
+                torch.unsqueeze(inst_kvq, dim=2)
+            )  # -1, inst_len, know_len, n_embd
+            att_inst = torch.sum(att_inst, dim=2)
+            att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
+            inst = torch.mul(att_inst, inst_kvq)
+            inst = torch.mean(inst, dim=1).squeeze(dim=1)
+        else:
+            knowledge = torch.mean(knowledge_kvq, dim=1).squeeze(dim=1)
+            inst = torch.mean(inst_kvq, dim=1).squeeze(dim=1)
+            
         return knowledge, inst
     
     def forward(self, batch_size: int, is_decoder: bool = False, encoder_hidden_states=None):
@@ -340,9 +351,13 @@ class KnowledgePromptGenerater(PromptGenerater):
 
 
 class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
-    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = ""):
+    """
+    instance + knowledge
+    with separated key/value/query tensors
+    """
+    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = "", do_cross_attention: bool=True):
         super(KnowledgePromptGeneraterV1, self).__init__(config=config, device=device, num_token=num_token,
-                                                         prefix_dropout=prefix_dropout)
+                                                         prefix_dropout=prefix_dropout, do_cross_attention=do_cross_attention)
         self.instance_key = nn.Linear(self.n_embd, self.mid_dim)
         self.instance_value = nn.Linear(self.n_embd, self.mid_dim)
         self.instance_query = nn.Linear(self.n_embd, self.mid_dim)
@@ -395,31 +410,39 @@ class KnowledgePromptGeneraterV1(KnowledgePromptGenerater):
         knowledge_value = self.knowledge_value(knowledge)  # -1, know_len, mid_dim
         knowledge_query = self.knowledge_key(knowledge)  # -1, know_len, mid_dim
         
-        att_knowledge = torch.mul(
-            torch.unsqueeze(inst_query, dim=1),
-            torch.unsqueeze(knowledge_key, dim=2)
-        )  # -1, know_len, inst_len, n_embd
-        att_knowledge = torch.sum(att_knowledge, dim=2)
-        att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
-        knowledge = torch.mul(att_knowledge, knowledge_value)
-        knowledge = torch.mean(knowledge, dim=1).squeeze(dim=1)
-        
-        att_inst = torch.mul(
-            torch.unsqueeze(knowledge_query, dim=1),
-            torch.unsqueeze(inst_key, dim=2)
-        )  # -1, inst_len, know_len, n_embd
-        att_inst = torch.sum(att_inst, dim=2)
-        att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
-        inst = torch.mul(att_inst, inst_value)
-        inst = torch.mean(inst, dim=1).squeeze(dim=1)
+        if self.do_cross_attention:
+            att_knowledge = torch.mul(
+                torch.unsqueeze(inst_query, dim=1),
+                torch.unsqueeze(knowledge_key, dim=2)
+            )  # -1, know_len, inst_len, n_embd
+            att_knowledge = torch.sum(att_knowledge, dim=2)
+            att_knowledge = torch.softmax(att_knowledge, dim=1)  # -1, know_len, n_embd
+            knowledge = torch.mul(att_knowledge, knowledge_value)
+            knowledge = torch.mean(knowledge, dim=1).squeeze(dim=1)
+    
+            att_inst = torch.mul(
+                torch.unsqueeze(knowledge_query, dim=1),
+                torch.unsqueeze(inst_key, dim=2)
+            )  # -1, inst_len, know_len, n_embd
+            att_inst = torch.sum(att_inst, dim=2)
+            att_inst = torch.softmax(att_inst, dim=1)  # -1, inst, n_embd
+            inst = torch.mul(att_inst, inst_value)
+            inst = torch.mean(inst, dim=1).squeeze(dim=1)
+        else:
+            knowledge = torch.mean(knowledge_value, dim=1).squeeze(dim=1)
+            inst = torch.mean(inst_value, dim=1).squeeze(dim=1)
         
         return knowledge, inst
 
 
 class KnowledgePromptGeneraterV2(KnowledgePromptGeneraterV1):
-    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = ""):
+    """
+    instance + knowledge + pseudo tokens
+    """
+    def __init__(self, config, device=None, num_token: int = 5, prefix_dropout: float = 0.5, knowledge_file: str = "",
+                 do_cross_attention: bool=True):
         super(KnowledgePromptGeneraterV2, self).__init__(config=config, device=device, num_token=num_token,
-                                                         prefix_dropout=prefix_dropout)
+                                                         prefix_dropout=prefix_dropout, do_cross_attention=do_cross_attention)
 
         self.control_trans = nn.Sequential(
             nn.Linear(2*self.mid_dim, self.mid_dim),
@@ -732,6 +755,9 @@ class PrefixEncoderDecoder(nn.Module):
         self.is_knowledge = prompt_generater.is_knowledge
         self._keys_to_ignore_on_save = None
         
+        self.is_encoder_conditioning = training_args.is_encoder_conditioning
+        self.is_decoder_conditioning = training_args.is_decoder_conditioning
+        
         self.num_token = self.prompt_generater.num_token
         
         self.is_modified_model = False
@@ -788,7 +814,8 @@ class PrefixEncoderDecoder(nn.Module):
                         # print(kwargs['past_key_value'].shape)
                     return backup_encoder_forward_functions[layer_id](*args, **kwargs)
                 
-                layer_module.layer[0].forward = partial(modified_encoder_forward, layer_id=i)
+                if self.is_encoder_conditioning:
+                    layer_module.layer[0].forward = partial(modified_encoder_forward, layer_id=i)
             
             # for knowledge aware prefix
             if self.is_knowledge:
@@ -839,7 +866,8 @@ class PrefixEncoderDecoder(nn.Module):
                     layer_id = kwargs.pop('layer_id')
                     return backup_decoder_cross_attn_forward_functions[layer_id](*args, **kwargs)
                 
-                layer_module.layer[1].forward = partial(modified_decoder_cross_attn_forward, layer_id=i)
+                if self.is_decoder_conditioning:
+                    layer_module.layer[1].forward = partial(modified_decoder_cross_attn_forward, layer_id=i)
             
             self.backup_encoder_forward_functions = backup_encoder_forward_functions
             self.backup_decoder_self_attn_forward_functions = backup_decoder_self_attn_forward_functions

@@ -22,11 +22,15 @@ export no_module=""
 export do_train="--do_train"
 export prefix_len=10
 export output_dir="models/"
-export constraint_decoding='--constraint_decoding'
+export constraint_decoding="--constraint_decoding"
 export source_length=512
 export target_length=256
+export do_cross_attention="do_cross_attention"
+export is_encoder_conditioning="--is_encoder_conditioning"
+export is_decoder_conditioning="--is_decoder_conditioning"
 
-OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,no_module:,source_length:,target_length:,wo_constraint_decoding -n 'parse-options' -- "$@")
+
+OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,wo_cross_attention:,wo_encoder_conditioning:,wo_decoder_conditioning:,no_module:,source_length:,target_length:,wo_constraint_decoding -n 'parse-options' -- "$@")
 
 if [ $? != 0 ]; then
   echo "Failed parsing options." >&2
@@ -114,6 +118,21 @@ while true; do
     ;;
   --is_knowledge)
     is_knowledge="--is_knowledge"
+    shift
+    shift
+    ;;
+  --wo_encoder_conditioning)
+    is_encoder_conditioning=""
+    shift
+    shift
+    ;;
+  --wo_decoder_conditioning)
+    is_decoder_conditioning=""
+    shift
+    shift
+    ;;
+  --wo_cross_attention)
+    do_cross_attention=""
     shift
     shift
     ;;
