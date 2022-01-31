@@ -27,19 +27,19 @@ from datetime import datetime
 def get_cmd():
     cmd_list = []
     info_list = []
-    for tuning_type in ["prefix", "both", "fine", "adapter", "both_adapter"]:
+    for tuning_type in ["both"]:
         current_time = datetime.now().strftime('%Y-%m-%d-%H-%M')
         for epoch in [120]:
-            for is_knowledge in [True, False]:
+            for is_knowledge in [True]:
                 is_knowledge = "--is_knowledge" if is_knowledge and tuning_type in ["prefix", "both", "hybrid",
                                                                                     "hybridpp"] else ""
                 for no_module in [False]:
                     no_module = "--no_module" if no_module else ""
                     for model in ["t5-base"]:
-                        for wo_encoder_conditioning in ["--wo_encoder_conditioning"]:
+                        for wo_encoder_conditioning in [""]:  # --wo_encoder_conditioning
                             for wo_decoder_conditioning in [""]:  # --wo_decoder_conditioning
                                 for wo_cross_attention in [""]:  # --wo_cross_attention
-                                    for wo_constrained_decoding in [""]:  # --wo_constraint_decoding
+                                    for wo_constrained_decoding in ["--wo_constraint_decoding"]:  # --wo_constraint_decoding
                                         for prefix_len in [20]:
                                             for data in ["oneie/oneie_33_training"]:
                                                 output_dir = f"models/sl_{tuning_type}_{wo_constrained_decoding}{wo_encoder_conditioning}{wo_cross_attention}{wo_decoder_conditioning}_{no_module}{is_knowledge}_len{prefix_len}_{data.split('/')[1]}_{current_time}"
