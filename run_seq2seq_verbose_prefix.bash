@@ -20,17 +20,17 @@ export tuning_type="both"
 export is_knowledge=""
 export no_module=""
 export do_train="--do_train"
-export prefix_len=10
+export pre_len=10
 export output_dir="models/"
 export constraint_decoding="--constraint_decoding"
 export source_length=512
 export target_length=256
-export do_cross_attention="do_cross_attention"
+export do_cross_attention="--do_cross_attention"
 export is_encoder_conditioning="--is_encoder_conditioning"
 export is_decoder_conditioning="--is_decoder_conditioning"
 
 
-OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,prefix_len:,tuning_type:,output_dir:,is_knowledge:,wo_cross_attention:,wo_encoder_conditioning:,wo_decoder_conditioning:,no_module:,source_length:,target_length:,wo_constraint_decoding -n 'parse-options' -- "$@")
+OPTS=$(getopt -o b:d:m:i:t:s:l:f: --long batch:,device:,model:,data:,task:,seed:,lr:,lr_scheduler:,label_smoothing:,prefix_len:,epoch:,format:,eval_steps:,no_train:,warmup_steps:,tuning_type:,output_dir:,is_knowledge:,wo_cross_attention:,wo_encoder_conditioning:,wo_decoder_conditioning:,no_module:,source_length:,target_length:,wo_constraint_decoding -n 'parse-options' -- "$@")
 
 if [ $? != 0 ]; then
   echo "Failed parsing options." >&2
@@ -97,7 +97,7 @@ while true; do
     shift
     ;;
   --prefix_len)
-    prefix_len="$2"
+    pre_len="$2"
     shift
     shift
     ;;
@@ -199,24 +199,28 @@ CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python run_seq2seq_prefix.py \
     --max_target_length=${target_length} \
     --num_train_epochs=${epoch} \
     --task=${task_name} \
-    --train_file=${data_folder}/train.json \
-    --validation_file=${data_folder}/val.json \
-    --test_file=${data_folder}/test.json \
-    --event_schema=${data_folder}/event.schema \
-    --per_device_train_batch_size=${batch_size} \
-    --per_device_eval_batch_size=$((batch_size * 4)) \
-    --output_dir=${output_dir} \
-    --logging_dir=${output_dir}_log \
-    --model_name_or_path=${model_name} \
-    --learning_rate=${lr} \
-    --lr_scheduler_type=${lr_scheduler} \
-    --label_smoothing_factor=${label_smoothing} \
+    --train_file ${data_folder}/train.json \
+    --validation_file ${data_folder}/val.json \
+    --test_file ${data_folder}/test.json \
+    --event_schema ${data_folder}/event.schema \
+    --per_device_train_batch_size ${batch_size} \
+    --per_device_eval_batch_size $((batch_size * 4)) \
+    --output_dir ${output_dir} \
+    --logging_dir ${output_dir}_log \
+    --model_name_or_path ${model_name} \
+    --learning_rate ${lr} \
+    --lr_scheduler_type ${lr_scheduler} \
+    --label_smoothing_factor ${label_smoothing} \
     --eval_steps ${eval_steps} \
     --decoding_format ${decoding_format} \
     --warmup_steps ${warmup_steps} \
-    --source_prefix="${task_name}: " \
+    --source_prefix "${task_name}: " \
+    --prefix_len ${pre_len} \
+    --tuning_type ${tuning_type} \
     --seed=${seed} \
     ${is_knowledge} \
     ${no_module} \
-    --prefix_len=${prefix_len} \
-    --tuning_type=${tuning_type}
+    ${is_encoder_conditioning} \
+    ${is_decoder_conditioning} \
+    ${do_cross_attention}
+

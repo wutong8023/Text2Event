@@ -444,6 +444,7 @@ class KnowledgePromptGeneraterV2(KnowledgePromptGeneraterV1):
         super(KnowledgePromptGeneraterV2, self).__init__(config=config, device=device, num_token=num_token,
                                                          prefix_dropout=prefix_dropout, do_cross_attention=do_cross_attention)
 
+        
         self.control_trans = nn.Sequential(
             nn.Linear(2*self.mid_dim, self.mid_dim),
             nn.Tanh(),
@@ -757,6 +758,7 @@ class PrefixEncoderDecoder(nn.Module):
         
         self.is_encoder_conditioning = training_args.is_encoder_conditioning
         self.is_decoder_conditioning = training_args.is_decoder_conditioning
+        self.do_cross_attention = training_args.do_cross_attention
         
         self.num_token = self.prompt_generater.num_token
         

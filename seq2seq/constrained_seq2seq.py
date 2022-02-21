@@ -92,9 +92,9 @@ class ConstraintSeq2SeqTrainingArguments(Seq2SeqTrainingArguments):
     is_knowledge: bool = field(default=False, metadata={"help": "use knowledge-enhanced prompt generation or not."})
     no_module: bool = field(default=False, metadata={"help": "use nn to generate prefix or not"})
     predict_with_generate: bool = field(default=False, metadata={"help": "use predict with generate"})
-    is_encoder_conditioning: bool = field(default=True, metadata={"help": "whether add prefix for encoder"})
-    is_decoder_conditioning: bool = field(default=True, metadata={"help": "whether add prefix for decoder"})
-    do_cross_attention: bool = field(default=True, metadata={"help": "do cross attention for knowledge filtering"})
+    is_encoder_conditioning: bool = field(default=False, metadata={"help": "whether add prefix for encoder"})
+    is_decoder_conditioning: bool = field(default=False, metadata={"help": "whether add prefix for decoder"})
+    do_cross_attention: bool = field(default=False, metadata={"help": "do cross attention for knowledge filtering"})
     
 
 class ConstraintSeq2SeqTrainer(Seq2SeqTrainer):

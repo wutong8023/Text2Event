@@ -426,6 +426,8 @@ def main():
                                      training_args=training_args)
     
     elif training_args.tuning_type in ["prefix", "both", "hybrid", "hybridpp"]:
+        print("Attention!!!!!!!!!!!!", training_args.prefix_len)
+        
         plm_model = T5ForPrefixGeneration.from_pretrained(
             "t5-base",
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
